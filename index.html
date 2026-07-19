@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sleek Multi-Lingual Flashcards</title>
+    <style>
+        :root {
+            --bg: #0b0f19;
+            --card-bg: #1e2235;
+            --card-back-bg: #131722;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --accent: #6366f1;
+            --accent-glow: rgba(99, 102, 241, 0.2);
+            --extra-btn: #10b981;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 16px;
+            box-sizing: border-box;
+        }
+        .container {
+            width: 100%;
+            max-width: 500px;
+            display: flex;
+            flex-direction: column;
+        }
+        h2 { text-align: center; margin-bottom: 8px; font-weight: 700; letter-spacing: -0.025em;}
+        p.subtitle { text-align: center; color: var(--text-muted); font-size: 14px; margin-top: 0; margin-bottom: 24px;}
+        
+        textarea {
+            width: 100%;
+            height: 220px;
+            background: #111524;
+            color: var(--text-main);
+            border: 1px solid #2e344e;
+            border-radius: 14px;
+            padding: 16px;
+            font-size: 15px;
+            line-height: 1.5;
+            resize: none;
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+        
+        button.primary-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 14px;
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            margin-top: 16px;
+            font-size: 16px;
+            box-shadow: 0 4px 12px var(--accent-glow);
+            transition: opacity 0.2s;
+        }
+        button.primary-btn:active { opacity: 0.8; }
+        .hidden { display: none !important; }
+        
+        /* Slick Flashcard Styling */
+        .card-container {
+            perspective: 1000px;
+            width: 100%;
+            height: 340px;
+            margin-top: 10px;
+        }
+        .card {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .card.flipped { transform: rotateY(180deg); }
+        .front, .back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            box-sizing: border-box;
+            border-radius: 20px;
+            background: var(--card-bg);
+            border: 1px solid #2d3149;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .front { font-size: 28px; font-weight: 700; text-align: center; }
+        .back {
+            transform: rotateY(180deg);
+            background: var(--card-back-bg);
+            justify-content: space-between;
+        }
+        .back-content {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            font-weight: 600;
+            text-align: center;
+            width: 100%;
+        }
+        
+        /* Third Column Feature */
+        .extra-wrapper {
+            width: 100%;
+            min-height: 60px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .extra-btn {
+            background: #22253a;
+            color: var(--text-muted);
+            border: 1px dashed #4b526d;
+            padding: 8px 16px;
+            font-size: 13px;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+        .extra-text {
+            font-size: 18px;
+            color: var(--extra-btn);
+            font-weight: 500;
+            text-align: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Navigation Layout */
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 24px;
+            gap: 12px;
+        }
+        .nav-btn {
+            background: #1e2235;
+            color: white;
+            border: 1px solid #2d3149;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            flex: 1;
+        }
+        .progress { font-size: 14px; color: var(--text-muted); font-weight: 500; min-width: 60px; text-align: center;}
+        .reset-link {
+            text-align: center;
+            color: var(--text-muted);
+            margin-top: 32px;
+            font-size: 14px;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container" id="setup-screen">
+    <h2>Flashcard Generator</h2>
+    <p class="subtitle">Supports 2 or 3 columns from Excel / Sheets</p>
+    <textarea id="data-input" placeholder="Example (3 Columns):&#10;French Word [Tab] Spanish Meaning [Tab] English Backup&#10;&#10;Example (2 Columns):&#10;French Word [Tab] Spanish Meaning"></textarea>
+    <button class="primary-btn" onclick="generateCards()">Generate Deck</button>
+</div>
+
+<div class="container hidden" id="card-screen">
+    <div class="card-container" onclick="flipCard()">
+        <div class="card" id="flashcard">
+            <div class="front" id="card-front">Front</div>
+            <div class="back">
+                <!-- Top Spacer to match layout balance -->
+                <div style="height:20px;"></div> 
+                <div class="back-content" id="card-back">Back</div>
+                <!-- Interactive 3rd Column Layer -->
+                <div class="extra-wrapper" id="extra-layer">
+                    <!-- Dynamic content injected here -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="controls">
+        <button class="nav-btn" onclick="prevCard(event)">Prev</button>
+        <span class="progress" id="progress-text">1 / 1</span>
+        <button class="nav-btn" onclick="nextCard(event)">Next</button>
+    </div>
+    <div class="reset-link" onclick="resetApp()">← Edit word list</div>
+</div>
+
+<script>
+    let cards = [];
+    let currentIndex = 0;
+    let extraRevealed = false;
+
+    // Auto-load previously saved list if available
+    window.onload = function() {
+        const savedData = localStorage.getItem('fc_saved_words');
+        if (savedData) {
+            document.getElementById('data-input').value = savedData;
+        }
+    }
+
+    function generateCards() {
+        const input = document.getElementById('data-input').value.trim();
+        if (!input) return alert('Please paste your list first!');
+
+        // Auto-save to phone storage
+        localStorage.setItem('fc_saved_words', input);
+
+        cards = [];
+        const lines = input.split('\n');
+        
+        lines.forEach(line => {
+            if (!line.trim()) return;
+            
+            // First split check for tabs (spreadsheet defaults), fallback to comma
+            let parts = line.split('\t');
+            if (parts.length < 2) parts = line.split(',');
+            
+            if (parts.length >= 2) {
+                cards.push({
+                    front: parts[0].trim(),
+                    back: parts[1].trim(),
+                    extra: parts[2] ? parts[2].trim() : null // Handles 3rd column if it exists
+                });
+            }
+        });
+
+        if (cards.length === 0) return alert('Could not parse text. Make sure you have at least 2 columns.');
+
+        currentIndex = 0;
+        document.getElementById('setup-screen').classList.add('hidden');
+        document.getElementById('card-screen').classList.remove('hidden');
+        renderCard();
+    }
+
+    function renderCard() {
+        if (cards.length === 0) return;
+        const cardElement = document.getElementById('flashcard');
+        cardElement.classList.remove('flipped'); 
+        extraRevealed = false; 
+
+        // Let execution finish before updating contents to hide visual swapping strings
+        document.getElementById('card-front').innerText = cards[currentIndex].front;
+        document.getElementById('card-back').innerText = cards[currentIndex].back;
+        document.getElementById('progress-text').innerText = `${currentIndex + 1} / ${cards.length}`;
+        
+        setupExtraLayer();
+    }
+
+    function setupExtraLayer() {
+        const layer = document.getElementById('extra-layer');
+        const currentCard = cards[currentIndex];
+
+        if (!currentCard.extra) {
+            layer.innerHTML = ''; // No 3rd language provided
+            return;
+        }
+
+        // Reset to trigger button state
+        layer.innerHTML = `<button class="extra-btn" onclick="revealExtra(event)">Reveal Backup Context</button>`;
+    }
+
+    function revealExtra(event) {
+        event.stopPropagation(); // Keeps card from flipping back when tapping button
+        const layer = document.getElementById('extra-layer');
+        layer.innerHTML = `<div class="extra-text">${cards[currentIndex].extra}</div>`;
+        extraRevealed = true;
+    }
+
+    function flipCard() {
+        document.getElementById('flashcard').classList.toggle('flipped');
+    }
+
+    function nextCard(event) {
+        event.stopPropagation();
+        if (currentIndex < cards.length - 1) {
+            currentIndex++;
+            renderCard();
+        }
+    }
+
+    function prevCard(event) {
+        event.stopPropagation();
+        if (currentIndex > 0) {
+            currentIndex--;
+            renderCard();
+        }
+    }
+
+    function resetApp() {
+        document.getElementById('card-screen').classList.add('hidden');
+        document.getElementById('setup-screen').classList.remove('hidden');
+    }
+</script>
+
+</body>
+</html>
