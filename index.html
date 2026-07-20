@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Anki-Style Voice Flashcards</title>
+    <title>Google Sheets Sync Flashcards</title>
     <style>
         :root {
             --bg: #0b0f19;
@@ -13,7 +13,6 @@
             --text-muted: #9ca3af;
             --accent: #6366f1;
             --accent-glow: rgba(99, 102, 241, 0.2);
-            --extra-btn: #10b981;
             --hard-btn: #ef4444;
             --easy-btn: #10b981;
         }
@@ -35,12 +34,11 @@
         
         .form-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
         label { font-size: 14px; font-weight: 600; color: var(--text-muted); }
-        select, textarea {
+        input, select {
             background: #111524; color: var(--text-main); border: 1px solid #2e344e;
             padding: 12px; border-radius: 10px; font-size: 15px; outline: none;
         }
-        textarea { height: 180px; resize: none; border-radius: 14px; }
-        textarea:focus, select:focus { border-color: var(--accent); }
+        input:focus, select:focus { border-color: var(--accent); }
         
         button.primary-btn {
             background: var(--accent); color: white; border: none; padding: 14px;
@@ -50,9 +48,7 @@
         .hidden { display: none !important; }
         
         /* Flashcard Layout */
-        .card-container {
-            perspective: 1000px; width: 100%; height: 340px; margin-top: 10px;
-        }
+        .card-container { perspective: 1000px; width: 100%; height: 340px; margin-top: 10px; }
         .card {
             width: 100%; height: 100%; position: relative; transform-style: preserve-3d;
             transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
@@ -78,9 +74,8 @@
 
         .extra-wrapper { width: 100%; min-height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .extra-btn { background: #22253a; color: var(--text-muted); border: 1px dashed #4b526d; padding: 8px 16px; font-size: 13px; border-radius: 20px; cursor: pointer; }
-        .extra-text { font-size: 18px; color: var(--extra-btn); font-weight: 500; text-align: center; }
+        .extra-text { font-size: 18px; color: #10b981; font-weight: 500; text-align: center; }
 
-        /* Anki Controls */
         .control-panel { margin-top: 24px; width: 100%; }
         .reveal-btn {
             width: 100%; background: #1e2235; color: var(--accent); border: 1px solid var(--accent);
@@ -91,23 +86,27 @@
             flex: 1; padding: 16px; border: none; border-radius: 12px; font-size: 15px; font-weight: 600;
             cursor: pointer; color: white; transition: opacity 0.2s;
         }
-        .anki-btn:active { opacity: 0.8; }
         .anki-btn.hard { background: var(--hard-btn); }
         .anki-btn.easy { background: var(--easy-btn); }
         
         .progress { text-align: center; font-size: 14px; color: var(--text-muted); font-weight: 500; margin-bottom: 12px;}
+        .status-badge { font-size: 12px; background: #2a3047; padding: 4px 10px; border-radius: 12px; color: #a5b4fc; margin-bottom: 8px;}
         .reset-link { text-align: center; color: var(--text-muted); margin-top: 32px; font-size: 14px; cursor: pointer; text-decoration: underline; }
-        .danger-text { color: #ef4444; text-decoration: none; margin-top: 20px; }
         
-        #completion-screen h1 { font-size: 50px; margin-bottom: 0; }
+        .loading { text-align: center; font-size: 16px; color: var(--accent); margin-top: 20px; }
     </style>
 </head>
 <body>
 
 <div class="container" id="setup-screen">
-    <h2>Daily Anki Generator</h2>
-    <p class="subtitle">Spaced repetition memory is active.</p>
+    <h2>Google Sheets Sync</h2>
+    <p class="subtitle">Direct live sync with your spreadsheet.</p>
     
+    <div class="form-group">
+        <label for="sheet-url">https://script.google.com/macros/s/AKfycbyPqV7TinO3uq5nivcxq8Z_MtAf464V8FsQ-R6oJ29MLrD3SQizCHU148KQnyFtqBsHNw/exec:</label>
+        <input type="text" id="sheet-url" placeholder="https://script.google.com/macros/s/.../exec">
+    </div>
+
     <div class="form-group">
         <label for="voice-lang">Front Card Audio Pronunciation:</label>
         <select id="voice-lang">
@@ -115,29 +114,21 @@
             <option value="es-ES">Spanish (Español)</option>
             <option value="en-US">English (US)</option>
             <option value="en-GB">English (UK)</option>
-            <option value="it-IT">Italian (Italiano)</option>
-            <option value="de-DE">German (Deutsch)</option>
-            <option value="ja-JP">Japanese (日本語)</option>
         </select>
     </div>
-
-    <div class="form-group">
-        <label for="data-input">Paste Word List (2 or 3 columns):</label>
-        <textarea id="data-input" placeholder="Example:&#10;Le chat [Tab] El gato [Tab] The cat"></textarea>
-    </div>
     
-    <button class="primary-btn" onclick="generateCards()">Study Due Cards</button>
-    <p class="reset-link danger-text" onclick="wipeMemory()">⚠️ Wipe Memory (Reset Algorithm)</p>
+    <button class="primary-btn" id="load-btn" onclick="fetchFromSheet()">Connect & Load Active Words</button>
+    <div id="loading-spinner" class="loading hidden">Syncing with Google Sheets...</div>
 </div>
 
 <div class="container hidden" id="card-screen">
-    <div class="progress" id="progress-text">0 cards remaining today</div>
+    <div class="progress" id="progress-text">0 cards remaining</div>
     
     <div class="card-container" onclick="flipCard()">
         <div class="card" id="flashcard">
             <!-- FRONT -->
             <div class="front">
-                <div style="height:50px;"></div> 
+                <span class="status-badge" id="card-status">Status: New</span>
                 <div id="card-front">Front</div>
                 <button class="audio-btn" onclick="speakText(event)">
                     <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
@@ -155,139 +146,84 @@
     <div class="control-panel">
         <button id="reveal-btn" class="reveal-btn" onclick="flipCard()">Show Answer</button>
         <div id="anki-controls" class="anki-controls hidden">
-            <button class="anki-btn hard" onclick="markHard(event)">🔴 Hard (Review Again)</button>
-            <button class="anki-btn easy" onclick="markEasy(event)">🟢 Easy (Done)</button>
+            <button class="anki-btn hard" onclick="handleMiss(event)">🔴 Missed It (Reset)</button>
+            <button class="anki-btn easy" onclick="handleCorrect(event)">🟢 Got It (+1 Check)</button>
         </div>
     </div>
-    <div class="reset-link" onclick="resetApp()">← Edit word list</div>
+    <div class="reset-link" onclick="resetApp()">← Disconnect / Settings</div>
 </div>
 
 <div class="container hidden" id="completion-screen" style="text-align: center; margin-top: 40px;">
     <h1>🎉</h1>
-    <h2>All caught up!</h2>
-    <p class="subtitle">You've cleared your daily queue. Come back tomorrow.</p>
+    <h2>All Active Words Cleared!</h2>
+    <p class="subtitle">Every word in your Google Sheet is currently marked as MASTERED.</p>
     <button class="primary-btn" onclick="resetApp()">Back to Menu</button>
 </div>
 
 <script>
     let activeQueue = [];
+    let scriptUrl = '';
     let chosenLanguage = 'fr-FR';
-    
-    // Anki State Dictionary: { "French Word": { streak: 2, nextReview: 16900000000 } }
-    let ankiState = JSON.parse(localStorage.getItem('fc_anki_state')) || {};
 
     window.onload = function() {
-        if (localStorage.getItem('fc_saved_words')) document.getElementById('data-input').value = localStorage.getItem('fc_saved_words');
-        if (localStorage.getItem('fc_saved_lang')) document.getElementById('voice-lang').value = localStorage.getItem('fc_saved_lang');
+        if (localStorage.getItem('fc_script_url')) {
+            document.getElementById('sheet-url').value = localStorage.getItem('fc_script_url');
+        }
+        if (localStorage.getItem('fc_saved_lang')) {
+            document.getElementById('voice-lang').value = localStorage.getItem('fc_saved_lang');
+        }
     }
 
-    function generateCards() {
-        const input = document.getElementById('data-input').value.trim();
+    async function fetchFromSheet() {
+        scriptUrl = document.getElementById('sheet-url').value.trim();
         chosenLanguage = document.getElementById('voice-lang').value;
-        if (!input) return alert('Please paste your list first!');
-
-        localStorage.setItem('fc_saved_words', input);
+        
+        if (!scriptUrl) return alert('Please paste your Google Apps Script URL!');
+        
+        localStorage.setItem('fc_script_url', scriptUrl);
         localStorage.setItem('fc_saved_lang', chosenLanguage);
 
-        activeQueue = [];
-        const now = Date.now();
-        const lines = input.split('\n');
-        
-        lines.forEach(line => {
-            if (!line.trim()) return;
-            let parts = line.split('\t');
-            if (parts.length < 2) parts = line.split(',');
-            
-            if (parts.length >= 2) {
-                const frontText = parts[0].trim();
-                const wordData = {
-                    front: frontText,
-                    back: parts[1].trim(),
-                    extra: parts[2] ? parts[2].trim() : null
-                };
-                
-                // Only add to today's queue if it's new, or if its nextReview date is in the past
-                const state = ankiState[frontText];
-                if (!state || state.nextReview <= now) {
-                    activeQueue.push(wordData);
-                }
+        document.getElementById('load-btn').classList.add('hidden');
+        document.getElementById('loading-spinner').classList.remove('hidden');
+
+        try {
+            const response = await fetch(scriptUrl);
+            const data = await response.json();
+
+            // Filter out MASTERED words automatically
+            activeQueue = data.filter(item => item.status !== 'MASTERED');
+
+            if (activeQueue.length === 0) {
+                document.getElementById('setup-screen').classList.add('hidden');
+                document.getElementById('completion-screen').classList.remove('hidden');
+            } else {
+                // Shuffle deck
+                activeQueue.sort(() => Math.random() - 0.5);
+                document.getElementById('setup-screen').classList.add('hidden');
+                document.getElementById('card-screen').classList.remove('hidden');
+                renderCard();
             }
-        });
-
-        if (activeQueue.length === 0) {
-            document.getElementById('setup-screen').classList.add('hidden');
-            document.getElementById('completion-screen').classList.remove('hidden');
-            return;
-        }
-
-        // Shuffle queue so learning isn't just positional memory
-        activeQueue.sort(() => Math.random() - 0.5);
-
-        document.getElementById('setup-screen').classList.add('hidden');
-        document.getElementById('card-screen').classList.remove('hidden');
-        renderCard();
-    }
-
-    function calculateNextReview(streak) {
-        // SRS Intervals: 1, 2, 4, 7, 14, 30 days based on streak
-        const intervals = [1, 2, 4, 7, 14, 30];
-        const days = intervals[Math.min(streak, intervals.length - 1)];
-        
-        // Push date into future, but lock it to Midnight so "Tomorrow" is always clean
-        let nextDate = new Date();
-        nextDate.setDate(nextDate.getDate() + days);
-        nextDate.setHours(0, 0, 0, 0); 
-        return nextDate.getTime();
-    }
-
-    function markHard(event) {
-        event.stopPropagation();
-        let currentCard = activeQueue.shift();
-        
-        // Reset streak to 0, but keep it in today's active queue
-        if(!ankiState[currentCard.front]) ankiState[currentCard.front] = { streak: 0, nextReview: 0 };
-        else ankiState[currentCard.front].streak = 0;
-        
-        localStorage.setItem('fc_anki_state', JSON.stringify(ankiState));
-        
-        // Push it to the back of the line so we see it again today
-        activeQueue.push(currentCard);
-        renderCard();
-    }
-
-    function markEasy(event) {
-        event.stopPropagation();
-        let currentCard = activeQueue.shift(); // Remove entirely from today's active line
-        
-        if(!ankiState[currentCard.front]) {
-            ankiState[currentCard.front] = { streak: 0, nextReview: 0 };
-        }
-        
-        // Bump streak, schedule for the future
-        ankiState[currentCard.front].streak += 1;
-        ankiState[currentCard.front].nextReview = calculateNextReview(ankiState[currentCard.front].streak);
-        localStorage.setItem('fc_anki_state', JSON.stringify(ankiState));
-        
-        if (activeQueue.length === 0) {
-            document.getElementById('card-screen').classList.add('hidden');
-            document.getElementById('completion-screen').classList.remove('hidden');
-        } else {
-            renderCard();
+        } catch (err) {
+            alert('Failed to connect to Google Sheet. Check your Apps Script deployment URL.');
+            console.error(err);
+        } finally {
+            document.getElementById('load-btn').classList.remove('hidden');
+            document.getElementById('loading-spinner').classList.add('hidden');
         }
     }
 
     function renderCard() {
         const cardElement = document.getElementById('flashcard');
-        
-        // Instant visual reset so we don't see the card awkwardly reverse-flip
         cardElement.style.transition = 'none';
         cardElement.classList.remove('flipped');
-        void cardElement.offsetWidth; // Force reflow
+        void cardElement.offsetWidth;
         cardElement.style.transition = 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
 
-        document.getElementById('card-front').innerText = activeQueue[0].front;
-        document.getElementById('card-back').innerText = activeQueue[0].back;
-        document.getElementById('progress-text').innerText = `${activeQueue.length} cards remaining today`;
+        const current = activeQueue[0];
+        document.getElementById('card-front').innerText = current.front;
+        document.getElementById('card-back').innerText = current.back;
+        document.getElementById('card-status').innerText = `Status: ${current.status || 'New'}`;
+        document.getElementById('progress-text').innerText = `${activeQueue.length} unmastered words remaining`;
         
         setupExtraLayer();
         
@@ -307,6 +243,55 @@
     function revealExtra(event) {
         event.stopPropagation();
         document.getElementById('extra-layer').innerHTML = `<div class="extra-text">${activeQueue[0].extra}</div>`;
+    }
+
+    async function handleCorrect(event) {
+        event.stopPropagation();
+        let currentCard = activeQueue.shift();
+        
+        let newStatus = '✓';
+        if (currentCard.status === '✓') newStatus = '✓✓';
+        else if (currentCard.status === '✓✓') newStatus = 'MASTERED';
+
+        // Silently update Google Sheet in background
+        sendUpdateToSheet(currentCard.rowIndex, newStatus);
+
+        // If not yet MASTERED, keep in active session stack
+        if (newStatus !== 'MASTERED') {
+            currentCard.status = newStatus;
+            activeQueue.push(currentCard);
+        }
+
+        checkQueueOrNext();
+    }
+
+    async function handleMiss(event) {
+        event.stopPropagation();
+        let currentCard = activeQueue.shift();
+        
+        // Reset checkmarks to blank on miss
+        let newStatus = '';
+        sendUpdateToSheet(currentCard.rowIndex, newStatus);
+
+        currentCard.status = newStatus;
+        activeQueue.push(currentCard); // Put at back of line
+
+        checkQueueOrNext();
+    }
+
+    function sendUpdateToSheet(rowIndex, newStatus) {
+        // Fire-and-forget background GET request to Google Apps Script
+        const updateUrl = `${scriptUrl}?action=update&row=${rowIndex}&status=${encodeURIComponent(newStatus)}`;
+        fetch(updateUrl, { mode: 'no-cors' }).catch(err => console.error("Sheet update failed", err));
+    }
+
+    function checkQueueOrNext() {
+        if (activeQueue.length === 0) {
+            document.getElementById('card-screen').classList.add('hidden');
+            document.getElementById('completion-screen').classList.remove('hidden');
+        } else {
+            renderCard();
+        }
     }
 
     function speakText(event) {
@@ -330,14 +315,6 @@
             cardElement.classList.add('flipped');
             document.getElementById('reveal-btn').classList.add('hidden');
             document.getElementById('anki-controls').classList.remove('hidden');
-        }
-    }
-
-    function wipeMemory() {
-        if(confirm("Are you sure? This will reset all your memory streaks to zero and make every word show up today.")) {
-            localStorage.removeItem('fc_anki_state');
-            ankiState = {};
-            alert("Memory wiped. Generate deck to start fresh!");
         }
     }
 
