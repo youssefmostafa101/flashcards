@@ -92,7 +92,6 @@
         .progress { text-align: center; font-size: 14px; color: var(--text-muted); font-weight: 500; margin-bottom: 12px;}
         .status-badge { font-size: 12px; background: #2a3047; padding: 4px 10px; border-radius: 12px; color: #a5b4fc; margin-bottom: 8px;}
         .reset-link { text-align: center; color: var(--text-muted); margin-top: 32px; font-size: 14px; cursor: pointer; text-decoration: underline; }
-        
         .loading { text-align: center; font-size: 16px; color: var(--accent); margin-top: 20px; }
     </style>
 </head>
@@ -126,7 +125,6 @@
     
     <div class="card-container" onclick="flipCard()">
         <div class="card" id="flashcard">
-            <!-- FRONT -->
             <div class="front">
                 <span class="status-badge" id="card-status">Status: New</span>
                 <div id="card-front">Front</div>
@@ -134,7 +132,6 @@
                     <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
                 </button>
             </div>
-            <!-- BACK -->
             <div class="back">
                 <div style="height:20px;"></div> 
                 <div class="back-content" id="card-back">Back</div>
@@ -187,25 +184,27 @@
         document.getElementById('loading-spinner').classList.remove('hidden');
 
         try {
-            const response = await fetch(scriptUrl);
+            // Added redirect: 'follow' to resolve GAS redirects automatically
+            const response = await fetch(scriptUrl, { redirect: 'follow' });
+            if (!response.ok) throw new Error('Network response was not ok');
+            
             const data = await response.json();
 
-            // Filter out MASTERED words automatically
+            // Filter out MASTERED words
             activeQueue = data.filter(item => item.status !== 'MASTERED');
 
             if (activeQueue.length === 0) {
                 document.getElementById('setup-screen').classList.add('hidden');
                 document.getElementById('completion-screen').classList.remove('hidden');
             } else {
-                // Shuffle deck
                 activeQueue.sort(() => Math.random() - 0.5);
                 document.getElementById('setup-screen').classList.add('hidden');
                 document.getElementById('card-screen').classList.remove('hidden');
                 renderCard();
             }
         } catch (err) {
-            alert('Failed to connect to Google Sheet. Check your Apps Script deployment URL.');
-            console.error(err);
+            console.error('Fetch error:', err);
+            alert('Failed to connect to Google Sheet.\n\nMake sure your Apps Script Deployment permission is set to "Who has access: Anyone".');
         } finally {
             document.getElementById('load-btn').classList.remove('hidden');
             document.getElementById('loading-spinner').classList.add('hidden');
@@ -253,10 +252,8 @@
         if (currentCard.status === '✓') newStatus = '✓✓';
         else if (currentCard.status === '✓✓') newStatus = 'MASTERED';
 
-        // Silently update Google Sheet in background
         sendUpdateToSheet(currentCard.rowIndex, newStatus);
 
-        // If not yet MASTERED, keep in active session stack
         if (newStatus !== 'MASTERED') {
             currentCard.status = newStatus;
             activeQueue.push(currentCard);
@@ -269,18 +266,16 @@
         event.stopPropagation();
         let currentCard = activeQueue.shift();
         
-        // Reset checkmarks to blank on miss
         let newStatus = '';
         sendUpdateToSheet(currentCard.rowIndex, newStatus);
 
         currentCard.status = newStatus;
-        activeQueue.push(currentCard); // Put at back of line
+        activeQueue.push(currentCard);
 
         checkQueueOrNext();
     }
 
     function sendUpdateToSheet(rowIndex, newStatus) {
-        // Fire-and-forget background GET request to Google Apps Script
         const updateUrl = `${scriptUrl}?action=update&row=${rowIndex}&status=${encodeURIComponent(newStatus)}`;
         fetch(updateUrl, { mode: 'no-cors' }).catch(err => console.error("Sheet update failed", err));
     }
