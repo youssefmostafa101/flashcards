@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sleek Voice Flashcards</title>
+    <title>Anki-Style Voice Flashcards</title>
     <style>
         :root {
             --bg: #0b0f19;
@@ -14,6 +14,8 @@
             --accent: #6366f1;
             --accent-glow: rgba(99, 102, 241, 0.2);
             --extra-btn: #10b981;
+            --hard-btn: #ef4444;
+            --easy-btn: #10b981;
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -27,188 +29,87 @@
             padding: 16px;
             box-sizing: border-box;
         }
-        .container {
-            width: 100%;
-            max-width: 500px;
-            display: flex;
-            flex-direction: column;
-        }
+        .container { width: 100%; max-width: 500px; display: flex; flex-direction: column; }
         h2 { text-align: center; margin-bottom: 8px; font-weight: 700; letter-spacing: -0.025em;}
         p.subtitle { text-align: center; color: var(--text-muted); font-size: 14px; margin-top: 0; margin-bottom: 24px;}
         
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            margin-bottom: 16px;
-        }
+        .form-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
         label { font-size: 14px; font-weight: 600; color: var(--text-muted); }
-        
-        select {
-            background: #111524;
-            color: var(--text-main);
-            border: 1px solid #2e344e;
-            padding: 12px;
-            border-radius: 10px;
-            font-size: 15px;
-            outline: none;
+        select, textarea {
+            background: #111524; color: var(--text-main); border: 1px solid #2e344e;
+            padding: 12px; border-radius: 10px; font-size: 15px; outline: none;
         }
-        
-        textarea {
-            width: 100%;
-            height: 200px;
-            background: #111524;
-            color: var(--text-main);
-            border: 1px solid #2e344e;
-            border-radius: 14px;
-            padding: 16px;
-            font-size: 15px;
-            line-height: 1.5;
-            resize: none;
-            box-sizing: border-box;
-            outline: none;
-        }
+        textarea { height: 180px; resize: none; border-radius: 14px; }
         textarea:focus, select:focus { border-color: var(--accent); }
         
         button.primary-btn {
-            background: var(--accent);
-            color: white;
-            border: none;
-            padding: 14px;
-            font-weight: 600;
-            border-radius: 12px;
-            cursor: pointer;
-            margin-top: 8px;
-            font-size: 16px;
+            background: var(--accent); color: white; border: none; padding: 14px;
+            font-weight: 600; border-radius: 12px; cursor: pointer; margin-top: 8px; font-size: 16px;
             box-shadow: 0 4px 12px var(--accent-glow);
         }
         .hidden { display: none !important; }
         
         /* Flashcard Layout */
         .card-container {
-            perspective: 1000px;
-            width: 100%;
-            height: 340px;
-            margin-top: 10px;
+            perspective: 1000px; width: 100%; height: 340px; margin-top: 10px;
         }
         .card {
-            width: 100%;
-            height: 100%;
-            position: relative;
-            transform-style: preserve-3d;
+            width: 100%; height: 100%; position: relative; transform-style: preserve-3d;
             transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .card.flipped { transform: rotateY(180deg); }
         .front, .back {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            backface-visibility: hidden;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: space-between;
-            padding: 24px;
-            box-sizing: border-box;
-            border-radius: 20px;
-            background: var(--card-bg);
-            border: 1px solid #2d3149;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            position: absolute; width: 100%; height: 100%; backface-visibility: hidden;
+            display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+            padding: 24px; box-sizing: border-box; border-radius: 20px;
+            background: var(--card-bg); border: 1px solid #2d3149; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
-        .front { font-size: 28px; font-weight: 700; text-align: center; }
-        .back {
-            transform: rotateY(180deg);
-            background: var(--card-back-bg);
-        }
-        .back-content {
-            flex-grow: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 26px;
-            font-weight: 600;
-            text-align: center;
-            width: 100%;
-        }
+        .front { font-size: 28px; font-weight: 700; text-align: center; cursor: pointer;}
+        .back { transform: rotateY(180deg); background: var(--card-back-bg); }
+        .back-content { flex-grow: 1; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 600; text-align: center; width: 100%; }
         
-        /* TTS Audio Button */
         .audio-btn {
-            background: rgba(255, 255, 255, 0.07);
-            border: none;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: background 0.2s;
-            margin-bottom: 20px;
+            background: rgba(255, 255, 255, 0.07); border: none; width: 50px; height: 50px;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: background 0.2s; margin-bottom: 20px;
         }
         .audio-btn:active { background: var(--accent); }
         .audio-btn svg { width: 22px; height: 22px; fill: var(--text-main); }
 
-        /* 3rd Column Layer */
-        .extra-wrapper {
-            width: 100%;
-            min-height: 60px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-        .extra-btn {
-            background: #22253a;
-            color: var(--text-muted);
-            border: 1px dashed #4b526d;
-            padding: 8px 16px;
-            font-size: 13px;
-            border-radius: 20px;
-            cursor: pointer;
-        }
-        .extra-text {
-            font-size: 18px;
-            color: var(--extra-btn);
-            font-weight: 500;
-            text-align: center;
-        }
+        .extra-wrapper { width: 100%; min-height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .extra-btn { background: #22253a; color: var(--text-muted); border: 1px dashed #4b526d; padding: 8px 16px; font-size: 13px; border-radius: 20px; cursor: pointer; }
+        .extra-text { font-size: 18px; color: var(--extra-btn); font-weight: 500; text-align: center; }
 
-        .controls {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 24px;
-            gap: 12px;
+        /* Anki Controls */
+        .control-panel { margin-top: 24px; width: 100%; }
+        .reveal-btn {
+            width: 100%; background: #1e2235; color: var(--accent); border: 1px solid var(--accent);
+            padding: 16px; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer;
         }
-        .nav-btn {
-            background: #1e2235;
-            color: white;
-            border: 1px solid #2d3149;
-            padding: 12px 24px;
-            border-radius: 10px;
-            font-size: 15px;
-            font-weight: 600;
-            flex: 1;
+        .anki-controls { display: flex; gap: 12px; width: 100%; }
+        .anki-btn {
+            flex: 1; padding: 16px; border: none; border-radius: 12px; font-size: 15px; font-weight: 600;
+            cursor: pointer; color: white; transition: opacity 0.2s;
         }
-        .progress { font-size: 14px; color: var(--text-muted); font-weight: 500; min-width: 60px; text-align: center;}
-        .reset-link {
-            text-align: center;
-            color: var(--text-muted);
-            margin-top: 32px;
-            font-size: 14px;
-            cursor: pointer;
-            text-decoration: underline;
-        }
+        .anki-btn:active { opacity: 0.8; }
+        .anki-btn.hard { background: var(--hard-btn); }
+        .anki-btn.easy { background: var(--easy-btn); }
+        
+        .progress { text-align: center; font-size: 14px; color: var(--text-muted); font-weight: 500; margin-bottom: 12px;}
+        .reset-link { text-align: center; color: var(--text-muted); margin-top: 32px; font-size: 14px; cursor: pointer; text-decoration: underline; }
+        .danger-text { color: #ef4444; text-decoration: none; margin-top: 20px; }
+        
+        #completion-screen h1 { font-size: 50px; margin-bottom: 0; }
     </style>
 </head>
 <body>
 
 <div class="container" id="setup-screen">
-    <h2>Flashcard Generator</h2>
-    <p class="subtitle">Supports audio + up to 3 context columns</p>
+    <h2>Daily Anki Generator</h2>
+    <p class="subtitle">Spaced repetition memory is active.</p>
     
     <div class="form-group">
-        <label for="voice-lang">Front Card Audio Pronunciation Language:</label>
+        <label for="voice-lang">Front Card Audio Pronunciation:</label>
         <select id="voice-lang">
             <option value="fr-FR">French (Français)</option>
             <option value="es-ES">Spanish (Español)</option>
@@ -221,25 +122,28 @@
     </div>
 
     <div class="form-group">
-        <label for="data-input">Paste Word List:</label>
-        <textarea id="data-input" placeholder="Example (3 Columns):&#10;French Word [Tab] Spanish Meaning [Tab] English Backup"></textarea>
+        <label for="data-input">Paste Word List (2 or 3 columns):</label>
+        <textarea id="data-input" placeholder="Example:&#10;Le chat [Tab] El gato [Tab] The cat"></textarea>
     </div>
     
-    <button class="primary-btn" onclick="generateCards()">Generate Deck</button>
+    <button class="primary-btn" onclick="generateCards()">Study Due Cards</button>
+    <p class="reset-link danger-text" onclick="wipeMemory()">⚠️ Wipe Memory (Reset Algorithm)</p>
 </div>
 
 <div class="container hidden" id="card-screen">
+    <div class="progress" id="progress-text">0 cards remaining today</div>
+    
     <div class="card-container" onclick="flipCard()">
         <div class="card" id="flashcard">
-            <!-- FRONT SIDE -->
+            <!-- FRONT -->
             <div class="front">
-                <div style="height:50px;"></div> <!-- Top spacer -->
+                <div style="height:50px;"></div> 
                 <div id="card-front">Front</div>
                 <button class="audio-btn" onclick="speakText(event)">
                     <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
                 </button>
             </div>
-            <!-- BACK SIDE -->
+            <!-- BACK -->
             <div class="back">
                 <div style="height:20px;"></div> 
                 <div class="back-content" id="card-back">Back</div>
@@ -248,24 +152,33 @@
         </div>
     </div>
     
-    <div class="controls">
-        <button class="nav-btn" onclick="prevCard(event)">Prev</button>
-        <span class="progress" id="progress-text">1 / 1</span>
-        <button class="nav-btn" onclick="nextCard(event)">Next</button>
+    <div class="control-panel">
+        <button id="reveal-btn" class="reveal-btn" onclick="flipCard()">Show Answer</button>
+        <div id="anki-controls" class="anki-controls hidden">
+            <button class="anki-btn hard" onclick="markHard(event)">🔴 Hard (Review Again)</button>
+            <button class="anki-btn easy" onclick="markEasy(event)">🟢 Easy (Done)</button>
+        </div>
     </div>
     <div class="reset-link" onclick="resetApp()">← Edit word list</div>
 </div>
 
+<div class="container hidden" id="completion-screen" style="text-align: center; margin-top: 40px;">
+    <h1>🎉</h1>
+    <h2>All caught up!</h2>
+    <p class="subtitle">You've cleared your daily queue. Come back tomorrow.</p>
+    <button class="primary-btn" onclick="resetApp()">Back to Menu</button>
+</div>
+
 <script>
-    let cards = [];
-    let currentIndex = 0;
+    let activeQueue = [];
     let chosenLanguage = 'fr-FR';
+    
+    // Anki State Dictionary: { "French Word": { streak: 2, nextReview: 16900000000 } }
+    let ankiState = JSON.parse(localStorage.getItem('fc_anki_state')) || {};
 
     window.onload = function() {
-        const savedData = localStorage.getItem('fc_saved_words');
-        const savedLang = localStorage.getItem('fc_saved_lang');
-        if (savedData) document.getElementById('data-input').value = savedData;
-        if (savedLang) document.getElementById('voice-lang').value = savedLang;
+        if (localStorage.getItem('fc_saved_words')) document.getElementById('data-input').value = localStorage.getItem('fc_saved_words');
+        if (localStorage.getItem('fc_saved_lang')) document.getElementById('voice-lang').value = localStorage.getItem('fc_saved_lang');
     }
 
     function generateCards() {
@@ -276,7 +189,8 @@
         localStorage.setItem('fc_saved_words', input);
         localStorage.setItem('fc_saved_lang', chosenLanguage);
 
-        cards = [];
+        activeQueue = [];
+        const now = Date.now();
         const lines = input.split('\n');
         
         lines.forEach(line => {
@@ -285,36 +199,105 @@
             if (parts.length < 2) parts = line.split(',');
             
             if (parts.length >= 2) {
-                cards.push({
-                    front: parts[0].trim(),
+                const frontText = parts[0].trim();
+                const wordData = {
+                    front: frontText,
                     back: parts[1].trim(),
                     extra: parts[2] ? parts[2].trim() : null
-                });
+                };
+                
+                // Only add to today's queue if it's new, or if its nextReview date is in the past
+                const state = ankiState[frontText];
+                if (!state || state.nextReview <= now) {
+                    activeQueue.push(wordData);
+                }
             }
         });
 
-        if (cards.length === 0) return alert('Could not parse text.');
+        if (activeQueue.length === 0) {
+            document.getElementById('setup-screen').classList.add('hidden');
+            document.getElementById('completion-screen').classList.remove('hidden');
+            return;
+        }
 
-        currentIndex = 0;
+        // Shuffle queue so learning isn't just positional memory
+        activeQueue.sort(() => Math.random() - 0.5);
+
         document.getElementById('setup-screen').classList.add('hidden');
         document.getElementById('card-screen').classList.remove('hidden');
         renderCard();
     }
 
-    function renderCard() {
-        if (cards.length === 0) return;
-        document.getElementById('flashcard').classList.remove('flipped'); 
+    function calculateNextReview(streak) {
+        // SRS Intervals: 1, 2, 4, 7, 14, 30 days based on streak
+        const intervals = [1, 2, 4, 7, 14, 30];
+        const days = intervals[Math.min(streak, intervals.length - 1)];
+        
+        // Push date into future, but lock it to Midnight so "Tomorrow" is always clean
+        let nextDate = new Date();
+        nextDate.setDate(nextDate.getDate() + days);
+        nextDate.setHours(0, 0, 0, 0); 
+        return nextDate.getTime();
+    }
 
-        document.getElementById('card-front').innerText = cards[currentIndex].front;
-        document.getElementById('card-back').innerText = cards[currentIndex].back;
-        document.getElementById('progress-text').innerText = `${currentIndex + 1} / ${cards.length}`;
+    function markHard(event) {
+        event.stopPropagation();
+        let currentCard = activeQueue.shift();
+        
+        // Reset streak to 0, but keep it in today's active queue
+        if(!ankiState[currentCard.front]) ankiState[currentCard.front] = { streak: 0, nextReview: 0 };
+        else ankiState[currentCard.front].streak = 0;
+        
+        localStorage.setItem('fc_anki_state', JSON.stringify(ankiState));
+        
+        // Push it to the back of the line so we see it again today
+        activeQueue.push(currentCard);
+        renderCard();
+    }
+
+    function markEasy(event) {
+        event.stopPropagation();
+        let currentCard = activeQueue.shift(); // Remove entirely from today's active line
+        
+        if(!ankiState[currentCard.front]) {
+            ankiState[currentCard.front] = { streak: 0, nextReview: 0 };
+        }
+        
+        // Bump streak, schedule for the future
+        ankiState[currentCard.front].streak += 1;
+        ankiState[currentCard.front].nextReview = calculateNextReview(ankiState[currentCard.front].streak);
+        localStorage.setItem('fc_anki_state', JSON.stringify(ankiState));
+        
+        if (activeQueue.length === 0) {
+            document.getElementById('card-screen').classList.add('hidden');
+            document.getElementById('completion-screen').classList.remove('hidden');
+        } else {
+            renderCard();
+        }
+    }
+
+    function renderCard() {
+        const cardElement = document.getElementById('flashcard');
+        
+        // Instant visual reset so we don't see the card awkwardly reverse-flip
+        cardElement.style.transition = 'none';
+        cardElement.classList.remove('flipped');
+        void cardElement.offsetWidth; // Force reflow
+        cardElement.style.transition = 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+
+        document.getElementById('card-front').innerText = activeQueue[0].front;
+        document.getElementById('card-back').innerText = activeQueue[0].back;
+        document.getElementById('progress-text').innerText = `${activeQueue.length} cards remaining today`;
         
         setupExtraLayer();
+        
+        document.getElementById('reveal-btn').classList.remove('hidden');
+        document.getElementById('anki-controls').classList.add('hidden');
     }
 
     function setupExtraLayer() {
         const layer = document.getElementById('extra-layer');
-        if (!cards[currentIndex].extra) {
+        if (!activeQueue[0].extra) {
             layer.innerHTML = '';
             return;
         }
@@ -323,54 +306,44 @@
 
     function revealExtra(event) {
         event.stopPropagation();
-        document.getElementById('extra-layer').innerHTML = `<div class="extra-text">${cards[currentIndex].extra}</div>`;
+        document.getElementById('extra-layer').innerHTML = `<div class="extra-text">${activeQueue[0].extra}</div>`;
     }
 
-    // THE NATIVE TTS ENGINE FUNCTION
     function speakText(event) {
-        event.stopPropagation(); // Stop the card from flipping when pressing the audio button
-        
+        event.stopPropagation(); 
         if ('speechSynthesis' in window) {
-            // Cancel any speech currently playing so it doesn't overlap
             window.speechSynthesis.cancel();
-            
-            const textToSpeak = cards[currentIndex].front;
-            const utterance = new SpeechSynthesisUtterance(textToSpeak);
+            const utterance = new SpeechSynthesisUtterance(activeQueue[0].front);
             utterance.lang = chosenLanguage;
             
-            // Auto-locate a high-quality system voice matching the language code if available
             const voices = window.speechSynthesis.getVoices();
             const matchingVoice = voices.find(v => v.lang.startsWith(chosenLanguage.split('-')[0]));
             if (matchingVoice) utterance.voice = matchingVoice;
             
             window.speechSynthesis.speak(utterance);
-        } else {
-            alert("Text-to-speech isn't supported on this browser version.");
         }
     }
 
     function flipCard() {
-        document.getElementById('flashcard').classList.toggle('flipped');
-    }
-
-    function nextCard(event) {
-        event.stopPropagation();
-        if (currentIndex < cards.length - 1) {
-            currentIndex++;
-            renderCard();
+        const cardElement = document.getElementById('flashcard');
+        if (!cardElement.classList.contains('flipped')) {
+            cardElement.classList.add('flipped');
+            document.getElementById('reveal-btn').classList.add('hidden');
+            document.getElementById('anki-controls').classList.remove('hidden');
         }
     }
 
-    function prevCard(event) {
-        event.stopPropagation();
-        if (currentIndex > 0) {
-            currentIndex--;
-            renderCard();
+    function wipeMemory() {
+        if(confirm("Are you sure? This will reset all your memory streaks to zero and make every word show up today.")) {
+            localStorage.removeItem('fc_anki_state');
+            ankiState = {};
+            alert("Memory wiped. Generate deck to start fresh!");
         }
     }
 
     function resetApp() {
         document.getElementById('card-screen').classList.add('hidden');
+        document.getElementById('completion-screen').classList.add('hidden');
         document.getElementById('setup-screen').classList.remove('hidden');
     }
 </script>
