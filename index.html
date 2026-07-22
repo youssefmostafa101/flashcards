@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rolling 10-Word Flashcards</title>
+    <title>30-Word Daily Flashcards</title>
     <style>
         :root {
             --bg: #0b0f19;
@@ -100,7 +100,7 @@
 
 <div class="container" id="setup-screen">
     <h2>Google Sheets Sync</h2>
-    <p class="subtitle">Powered by the Rolling 10-Word Focus Pool</p>
+    <p class="subtitle">30-Word Daily Batch | 10-Word Focus Pool</p>
     
     <div class="form-group">
         <label for="sheet-url">Google Apps Script Web App URL:</label>
@@ -120,12 +120,12 @@
         </select>
     </div>
     
-    <button class="primary-btn" id="load-btn" onclick="fetchFromSheet()">Connect & Load Active Words</button>
+    <button class="primary-btn" id="load-btn" onclick="fetchFromSheet()">Load Today's 30 Words</button>
     <div id="loading-spinner" class="loading hidden">Syncing with Google Sheets...</div>
 </div>
 
 <div class="container hidden" id="card-screen">
-    <div class="progress" id="progress-text">0 total words left</div>
+    <div class="progress" id="progress-text">0 words left in today's batch</div>
     <div class="pool-indicator" id="pool-text">🔥 Active Focus Arena: 10 words</div>
     
     <div class="card-container" onclick="flipCard()">
@@ -157,13 +157,15 @@
 
 <div class="container hidden" id="completion-screen" style="text-align: center; margin-top: 40px;">
     <h1>🎉</h1>
-    <h2>All Active Words Cleared!</h2>
-    <p class="subtitle">Every word in your Google Sheet is currently marked as MASTERED.</p>
+    <h2>Batch Complete!</h2>
+    <p class="subtitle">You successfully mastered 30 words today. Great job!</p>
     <button class="primary-btn" onclick="resetApp()">Back to Menu</button>
 </div>
 
 <script>
-    const POOL_SIZE = 10; // Locked strictly to a 10-word focus cycle
+    const BATCH_SIZE = 30; // The total bubble of words for the daily session
+    const POOL_SIZE = 10;  // The tight focus cycle
+    
     let activePool = [];
     let waitingRoom = [];
     let scriptUrl = '';
@@ -202,13 +204,18 @@
             if (unmastered.length === 0) {
                 document.getElementById('setup-screen').classList.add('hidden');
                 document.getElementById('completion-screen').classList.remove('hidden');
+                document.querySelector('#completion-screen h2').innerText = "All Sheets Cleared!";
+                document.querySelector('#completion-screen p').innerText = "Every single word in your Google Sheet is MASTERED.";
             } else {
                 // Shuffle all unmastered words randomly
                 unmastered.sort(() => Math.random() - 0.5);
                 
-                // Slice the first 10 words into the Active Pool, rest go to Waiting Room
-                activePool = unmastered.splice(0, POOL_SIZE);
-                waitingRoom = unmastered;
+                // NEW: Grab exactly 30 words to form today's batch limit
+                let dailyBatch = unmastered.slice(0, BATCH_SIZE);
+                
+                // Out of those 30, slice the first 10 into the Active Pool, rest go to Waiting Room
+                activePool = dailyBatch.splice(0, POOL_SIZE);
+                waitingRoom = dailyBatch;
 
                 document.getElementById('setup-screen').classList.add('hidden');
                 document.getElementById('card-screen').classList.remove('hidden');
@@ -236,7 +243,7 @@
         document.getElementById('card-status').innerText = current.status ? `Status: ${current.status}` : 'Status: New';
         
         const totalLeft = activePool.length + waitingRoom.length;
-        document.getElementById('progress-text').innerText = `${totalLeft} unmastered words remaining in sheet`;
+        document.getElementById('progress-text').innerText = `${totalLeft} words remaining in today's batch`;
         document.getElementById('pool-text').innerText = `🔥 Active Focus Arena: ${activePool.length} words`;
         
         setupExtraLayer();
@@ -345,3 +352,4 @@
 
 </body>
 </html>
+
