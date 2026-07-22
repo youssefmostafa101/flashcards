@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Google Sheets Sync Flashcards</title>
+    <title>Rolling Pool Flashcards</title>
     <style>
         :root {
             --bg: #0b0f19;
@@ -60,7 +60,7 @@
             padding: 24px; box-sizing: border-box; border-radius: 20px;
             background: var(--card-bg); border: 1px solid #2d3149; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
-        .front { font-size: 28px; font-weight: 700; text-align: center; cursor: pointer;}
+        .front { font-size: 26px; font-weight: 700; text-align: center; cursor: pointer;}
         .back { transform: rotateY(180deg); background: var(--card-back-bg); }
         .back-content { flex-grow: 1; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 600; text-align: center; width: 100%; }
         
@@ -89,7 +89,8 @@
         .anki-btn.hard { background: var(--hard-btn); }
         .anki-btn.easy { background: var(--easy-btn); }
         
-        .progress { text-align: center; font-size: 14px; color: var(--text-muted); font-weight: 500; margin-bottom: 12px;}
+        .progress { text-align: center; font-size: 14px; color: var(--text-muted); font-weight: 500; margin-bottom: 4px;}
+        .pool-indicator { text-align: center; font-size: 12px; color: #6366f1; font-weight: 600; margin-bottom: 12px; }
         .status-badge { font-size: 12px; background: #2a3047; padding: 4px 10px; border-radius: 12px; color: #a5b4fc; margin-bottom: 8px;}
         .reset-link { text-align: center; color: var(--text-muted); margin-top: 32px; font-size: 14px; cursor: pointer; text-decoration: underline; }
         .loading { text-align: center; font-size: 16px; color: var(--accent); margin-top: 20px; }
@@ -99,7 +100,7 @@
 
 <div class="container" id="setup-screen">
     <h2>Google Sheets Sync</h2>
-    <p class="subtitle">Direct live sync with your spreadsheet.</p>
+    <p class="subtitle">Powered by the Rolling 15-Word Focus Pool</p>
     
     <div class="form-group">
         <label for="sheet-url">Google Apps Script Web App URL:</label>
@@ -109,10 +110,13 @@
     <div class="form-group">
         <label for="voice-lang">Front Card Audio Pronunciation:</label>
         <select id="voice-lang">
-            <option value="fr-FR">French (Français)</option>
             <option value="es-ES">Spanish (Español)</option>
+            <option value="fr-FR">French (Français)</option>
+            <option value="de-DE">German (Deutsch)</option>
             <option value="en-US">English (US)</option>
             <option value="en-GB">English (UK)</option>
+            <option value="it-IT">Italian (Italiano)</option>
+            <option value="ja-JP">Japanese (日本語)</option>
         </select>
     </div>
     
@@ -121,7 +125,8 @@
 </div>
 
 <div class="container hidden" id="card-screen">
-    <div class="progress" id="progress-text">0 cards remaining</div>
+    <div class="progress" id="progress-text">0 total words left</div>
+    <div class="pool-indicator" id="pool-text">🔥 Active Focus Arena: 15 words</div>
     
     <div class="card-container" onclick="flipCard()">
         <div class="card" id="flashcard">
@@ -158,9 +163,11 @@
 </div>
 
 <script>
-    let activeQueue = [];
+    const POOL_SIZE = 15; // The magic number for your active focus arena
+    let activePool = [];
+    let waitingRoom = [];
     let scriptUrl = '';
-    let chosenLanguage = 'fr-FR';
+    let chosenLanguage = 'es-ES';
 
     window.onload = function() {
         if (localStorage.getItem('fc_script_url')) {
@@ -184,20 +191,25 @@
         document.getElementById('loading-spinner').classList.remove('hidden');
 
         try {
-            // Added redirect: 'follow' to resolve GAS redirects automatically
             const response = await fetch(scriptUrl, { redirect: 'follow' });
             if (!response.ok) throw new Error('Network response was not ok');
             
             const data = await response.json();
 
-            // Filter out MASTERED words
-            activeQueue = data.filter(item => item.status !== 'MASTERED');
+            // Auto-filter out MASTERED words
+            let unmastered = data.filter(item => item.status !== 'MASTERED');
 
-            if (activeQueue.length === 0) {
+            if (unmastered.length === 0) {
                 document.getElementById('setup-screen').classList.add('hidden');
                 document.getElementById('completion-screen').classList.remove('hidden');
             } else {
-                activeQueue.sort(() => Math.random() - 0.5);
+                // Shuffle all unmastered words randomly
+                unmastered.sort(() => Math.random() - 0.5);
+                
+                // Slice the first 15 words into the Active Pool, rest go to Waiting Room
+                activePool = unmastered.splice(0, POOL_SIZE);
+                waitingRoom = unmastered;
+
                 document.getElementById('setup-screen').classList.add('hidden');
                 document.getElementById('card-screen').classList.remove('hidden');
                 renderCard();
@@ -218,11 +230,14 @@
         void cardElement.offsetWidth;
         cardElement.style.transition = 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
 
-        const current = activeQueue[0];
+        const current = activePool[0];
         document.getElementById('card-front').innerText = current.front;
         document.getElementById('card-back').innerText = current.back;
         document.getElementById('card-status').innerText = `Status: ${current.status || 'New'}`;
-        document.getElementById('progress-text').innerText = `${activeQueue.length} unmastered words remaining`;
+        
+        const totalLeft = activePool.length + waitingRoom.length;
+        document.getElementById('progress-text').innerText = `${totalLeft} unmastered words remaining in sheet`;
+        document.getElementById('pool-text').innerText = `🔥 Active Focus Arena: ${activePool.length} words`;
         
         setupExtraLayer();
         
@@ -232,7 +247,7 @@
 
     function setupExtraLayer() {
         const layer = document.getElementById('extra-layer');
-        if (!activeQueue[0].extra) {
+        if (!activePool[0].extra) {
             layer.innerHTML = '';
             return;
         }
@@ -241,12 +256,12 @@
 
     function revealExtra(event) {
         event.stopPropagation();
-        document.getElementById('extra-layer').innerHTML = `<div class="extra-text">${activeQueue[0].extra}</div>`;
+        document.getElementById('extra-layer').innerHTML = `<div class="extra-text">${activePool[0].extra}</div>`;
     }
 
     async function handleCorrect(event) {
         event.stopPropagation();
-        let currentCard = activeQueue.shift();
+        let currentCard = activePool.shift(); // Remove from active arena
         
         let newStatus = '✓';
         if (currentCard.status === '✓') newStatus = '✓✓';
@@ -254,9 +269,15 @@
 
         sendUpdateToSheet(currentCard.rowIndex, newStatus);
 
+        // If not yet MASTERED, send it to the back of the Waiting Room line!
         if (newStatus !== 'MASTERED') {
             currentCard.status = newStatus;
-            activeQueue.push(currentCard);
+            waitingRoom.push(currentCard);
+        }
+
+        // Pull 1 new word from the Waiting Room into the Active Arena to replace it
+        if (waitingRoom.length > 0) {
+            activePool.push(waitingRoom.shift());
         }
 
         checkQueueOrNext();
@@ -264,13 +285,15 @@
 
     async function handleMiss(event) {
         event.stopPropagation();
-        let currentCard = activeQueue.shift();
+        let currentCard = activePool.shift();
         
         let newStatus = '';
         sendUpdateToSheet(currentCard.rowIndex, newStatus);
 
         currentCard.status = newStatus;
-        activeQueue.push(currentCard);
+        
+        // TRAPPED: Push it to the back of the 15-word Active Pool so you see it again soon!
+        activePool.push(currentCard);
 
         checkQueueOrNext();
     }
@@ -281,7 +304,7 @@
     }
 
     function checkQueueOrNext() {
-        if (activeQueue.length === 0) {
+        if (activePool.length === 0 && waitingRoom.length === 0) {
             document.getElementById('card-screen').classList.add('hidden');
             document.getElementById('completion-screen').classList.remove('hidden');
         } else {
@@ -293,7 +316,7 @@
         event.stopPropagation(); 
         if ('speechSynthesis' in window) {
             window.speechSynthesis.cancel();
-            const utterance = new SpeechSynthesisUtterance(activeQueue[0].front);
+            const utterance = new SpeechSynthesisUtterance(activePool[0].front);
             utterance.lang = chosenLanguage;
             
             const voices = window.speechSynthesis.getVoices();
