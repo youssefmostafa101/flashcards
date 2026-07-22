@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rolling Pool Flashcards</title>
+    <title>Rolling 10-Word Flashcards</title>
     <style>
         :root {
             --bg: #0b0f19;
@@ -100,7 +100,7 @@
 
 <div class="container" id="setup-screen">
     <h2>Google Sheets Sync</h2>
-    <p class="subtitle">Powered by the Rolling 15-Word Focus Pool</p>
+    <p class="subtitle">Powered by the Rolling 10-Word Focus Pool</p>
     
     <div class="form-group">
         <label for="sheet-url">Google Apps Script Web App URL:</label>
@@ -163,7 +163,7 @@
 </div>
 
 <script>
-    const POOL_SIZE = 10; // The number for your active focus arena
+    const POOL_SIZE = 10; // Locked strictly to a 10-word focus cycle
     let activePool = [];
     let waitingRoom = [];
     let scriptUrl = '';
@@ -196,7 +196,7 @@
             
             const data = await response.json();
 
-            // Auto-filter out MASTERED words
+            // Strictly filter out MASTERED words
             let unmastered = data.filter(item => item.status !== 'MASTERED');
 
             if (unmastered.length === 0) {
@@ -206,7 +206,7 @@
                 // Shuffle all unmastered words randomly
                 unmastered.sort(() => Math.random() - 0.5);
                 
-                // Slice the first 15 words into the Active Pool, rest go to Waiting Room
+                // Slice the first 10 words into the Active Pool, rest go to Waiting Room
                 activePool = unmastered.splice(0, POOL_SIZE);
                 waitingRoom = unmastered;
 
@@ -233,7 +233,7 @@
         const current = activePool[0];
         document.getElementById('card-front').innerText = current.front;
         document.getElementById('card-back').innerText = current.back;
-        document.getElementById('card-status').innerText = `Status: ${current.status || 'New'}`;
+        document.getElementById('card-status').innerText = current.status ? `Status: ${current.status}` : 'Status: New';
         
         const totalLeft = activePool.length + waitingRoom.length;
         document.getElementById('progress-text').innerText = `${totalLeft} unmastered words remaining in sheet`;
@@ -247,7 +247,7 @@
 
     function setupExtraLayer() {
         const layer = document.getElementById('extra-layer');
-        if (!activePool[0].extra) {
+        if (!activePool[0].extra || activePool[0].extra === '') {
             layer.innerHTML = '';
             return;
         }
@@ -275,8 +275,8 @@
             waitingRoom.push(currentCard);
         }
 
-        // Pull 1 new word from the Waiting Room into the Active Arena to replace it
-        if (waitingRoom.length > 0) {
+        // Guaranteed Refill Loop: Keeps arena topped up at 10 words as long as waiting room has words
+        while (activePool.length < POOL_SIZE && waitingRoom.length > 0) {
             activePool.push(waitingRoom.shift());
         }
 
@@ -292,7 +292,7 @@
 
         currentCard.status = newStatus;
         
-        // TRAPPED: Push it to the back of the 15-word Active Pool so you see it again soon!
+        // TRAPPED: Push it back into the 10-word pool so you face it again soon!
         activePool.push(currentCard);
 
         checkQueueOrNext();
