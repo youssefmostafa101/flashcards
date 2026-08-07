@@ -110,13 +110,10 @@
     <div class="form-group">
         <label for="voice-lang">Front Card Audio Pronunciation:</label>
         <select id="voice-lang">
-            <option value="es-ES">Spanish (Español)</option>
-            <option value="fr-FR">French (Français)</option>
             <option value="de-DE">German (Deutsch)</option>
+            <option value="ru-RU">Russian (Русский)</option>
             <option value="en-US">English (US)</option>
             <option value="en-GB">English (UK)</option>
-            <option value="it-IT">Italian (Italiano)</option>
-            <option value="ja-JP">Japanese (日本語)</option>
         </select>
     </div>
     
@@ -169,7 +166,7 @@
     let activePool = [];
     let waitingRoom = [];
     let scriptUrl = '';
-    let chosenLanguage = 'es-ES';
+    let chosenLanguage = 'de-DE';
 
     window.onload = function() {
         if (localStorage.getItem('fc_script_url')) {
@@ -210,7 +207,7 @@
                 // Shuffle all unmastered words randomly
                 unmastered.sort(() => Math.random() - 0.5);
                 
-                // NEW: Grab exactly 30 words to form today's batch limit
+                // Grab exactly 30 words to form today's batch limit
                 let dailyBatch = unmastered.slice(0, BATCH_SIZE);
                 
                 // Out of those 30, slice the first 10 into the Active Pool, rest go to Waiting Room
@@ -336,11 +333,11 @@
 
     function flipCard() {
         const cardElement = document.getElementById('flashcard');
-        if (!cardElement.classList.contains('flipped')) {
-            cardElement.classList.add('flipped');
-            document.getElementById('reveal-btn').classList.add('hidden');
-            document.getElementById('anki-controls').classList.remove('hidden');
-        }
+        cardElement.classList.toggle('flipped'); // Allows infinite flipping back and forth
+        
+        // Ensure the control buttons stay visible once the answer is revealed
+        document.getElementById('reveal-btn').classList.add('hidden');
+        document.getElementById('anki-controls').classList.remove('hidden');
     }
 
     function resetApp() {
@@ -352,4 +349,3 @@
 
 </body>
 </html>
-
