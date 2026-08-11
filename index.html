@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>30-Word Daily Flashcards</title>
+    <title>Sequential Daily Flashcards</title>
     <style>
         :root {
             --bg: #0b0f19;
@@ -44,6 +44,12 @@
             background: var(--accent); color: white; border: none; padding: 14px;
             font-weight: 600; border-radius: 12px; cursor: pointer; margin-top: 8px; font-size: 16px;
             box-shadow: 0 4px 12px var(--accent-glow);
+            width: 100%;
+        }
+        button.secondary-btn {
+            background: #1e2235; color: var(--text-main); border: 1px solid #2e344e; padding: 14px;
+            font-weight: 600; border-radius: 12px; cursor: pointer; margin-top: 12px; font-size: 16px;
+            width: 100%;
         }
         .hidden { display: none !important; }
         
@@ -52,6 +58,7 @@
         .card {
             width: 100%; height: 100%; position: relative; transform-style: preserve-3d;
             transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
         }
         .card.flipped { transform: rotateY(180deg); }
         .front, .back {
@@ -60,7 +67,7 @@
             padding: 24px; box-sizing: border-box; border-radius: 20px;
             background: var(--card-bg); border: 1px solid #2d3149; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
-        .front { font-size: 26px; font-weight: 700; text-align: center; cursor: pointer;}
+        .front { font-size: 26px; font-weight: 700; text-align: center; }
         .back { transform: rotateY(180deg); background: var(--card-back-bg); }
         .back-content { flex-grow: 1; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 600; text-align: center; width: 100%; }
         
@@ -89,8 +96,9 @@
         .anki-btn.hard { background: var(--hard-btn); }
         .anki-btn.easy { background: var(--easy-btn); }
         
-        .progress { text-align: center; font-size: 14px; color: var(--text-muted); font-weight: 500; margin-bottom: 4px;}
-        .pool-indicator { text-align: center; font-size: 12px; color: #6366f1; font-weight: 600; margin-bottom: 12px; }
+        .progress-box { background: #111524; border: 1px solid #2e344e; border-radius: 12px; padding: 12px; margin-bottom: 16px; display: flex; flex-direction: column; align-items: center; }
+        .progress { font-size: 16px; color: var(--text-main); font-weight: 700; margin-bottom: 4px;}
+        .pool-indicator { font-size: 13px; color: #6366f1; font-weight: 600; }
         .status-badge { font-size: 12px; background: #2a3047; padding: 4px 10px; border-radius: 12px; color: #a5b4fc; margin-bottom: 8px;}
         .reset-link { text-align: center; color: var(--text-muted); margin-top: 32px; font-size: 14px; cursor: pointer; text-decoration: underline; }
         .loading { text-align: center; font-size: 16px; color: var(--accent); margin-top: 20px; }
@@ -100,7 +108,7 @@
 
 <div class="container" id="setup-screen">
     <h2>Google Sheets Sync</h2>
-    <p class="subtitle">30-Word Daily Batch | 10-Word Focus Pool</p>
+    <p class="subtitle">Sequential 35-Word Batch | 10-Word Focus Pool</p>
     
     <div class="form-group">
         <label for="sheet-url">Google Apps Script Web App URL:</label>
@@ -108,7 +116,7 @@
     </div>
 
     <div class="form-group">
-        <label for="voice-lang">Front Card Audio Pronunciation:</label>
+        <label for="voice-lang">Target Language Audio:</label>
         <select id="voice-lang">
             <option value="de-DE">German (Deutsch)</option>
             <option value="ru-RU">Russian (Русский)</option>
@@ -117,13 +125,15 @@
         </select>
     </div>
     
-    <button class="primary-btn" id="load-btn" onclick="fetchFromSheet()">Load Today's 30 Words</button>
+    <button class="primary-btn" id="load-btn" onclick="fetchFromSheet()">Load Next 35 Words</button>
     <div id="loading-spinner" class="loading hidden">Syncing with Google Sheets...</div>
 </div>
 
 <div class="container hidden" id="card-screen">
-    <div class="progress" id="progress-text">0 words left in today's batch</div>
-    <div class="pool-indicator" id="pool-text">🔥 Active Focus Arena: 10 words</div>
+    <div class="progress-box">
+        <div class="progress" id="progress-text">Batch Progress: 0 / 35 Mastered</div>
+        <div class="pool-indicator" id="pool-text">🔥 Active Focus Arena: 10 words</div>
+    </div>
     
     <div class="card-container" onclick="flipCard()">
         <div class="card" id="flashcard">
@@ -143,10 +153,10 @@
     </div>
     
     <div class="control-panel">
-        <button id="reveal-btn" class="reveal-btn" onclick="flipCard()">Show Answer</button>
+        <button id="reveal-btn" class="reveal-btn" onclick="flipCard(event)">Show Answer</button>
         <div id="anki-controls" class="anki-controls hidden">
-            <button class="anki-btn hard" onclick="handleMiss(event)">🔴 Missed It (Reset)</button>
-            <button class="anki-btn easy" onclick="handleCorrect(event)">🟢 Got It (+1 Check)</button>
+            <button class="anki-btn hard" onclick="handleMiss(event)">🔴 Missed It</button>
+            <button class="anki-btn easy" onclick="handleCorrect(event)">🟢 Got It</button>
         </div>
     </div>
     <div class="reset-link" onclick="resetApp()">← Disconnect / Settings</div>
@@ -154,19 +164,22 @@
 
 <div class="container hidden" id="completion-screen" style="text-align: center; margin-top: 40px;">
     <h1>🎉</h1>
-    <h2>Batch Complete!</h2>
-    <p class="subtitle">You successfully mastered 30 words today. Great job!</p>
-    <button class="primary-btn" onclick="resetApp()">Back to Menu</button>
+    <h2>Daily Goal Reached!</h2>
+    <p class="subtitle" id="completion-msg">You successfully mastered your 35-word sequential batch.</p>
+    <button class="primary-btn" onclick="resetApp()">Done for Today</button>
+    <button class="secondary-btn" onclick="fetchFromSheet()">Load Next 35 Words</button>
 </div>
 
 <script>
-    const BATCH_SIZE = 30; // The total bubble of words for the daily session
-    const POOL_SIZE = 10;  // The tight focus cycle
+    const BATCH_SIZE = 35; 
+    const POOL_SIZE = 10;  
     
     let activePool = [];
     let waitingRoom = [];
     let scriptUrl = '';
     let chosenLanguage = 'de-DE';
+    let masteredInBatch = 0;
+    let currentBatchTotal = 0;
 
     window.onload = function() {
         if (localStorage.getItem('fc_script_url')) {
@@ -186,6 +199,9 @@
         localStorage.setItem('fc_script_url', scriptUrl);
         localStorage.setItem('fc_saved_lang', chosenLanguage);
 
+        document.getElementById('setup-screen').classList.add('hidden');
+        document.getElementById('completion-screen').classList.add('hidden');
+        document.getElementById('setup-screen').classList.remove('hidden');
         document.getElementById('load-btn').classList.add('hidden');
         document.getElementById('loading-spinner').classList.remove('hidden');
 
@@ -195,23 +211,23 @@
             
             const data = await response.json();
 
-            // Strictly filter out MASTERED words
+            // Filter out MASTERED words. NO SHUFFLING to maintain list organization.
             let unmastered = data.filter(item => item.status !== 'MASTERED');
 
             if (unmastered.length === 0) {
                 document.getElementById('setup-screen').classList.add('hidden');
                 document.getElementById('completion-screen').classList.remove('hidden');
                 document.querySelector('#completion-screen h2').innerText = "All Sheets Cleared!";
-                document.querySelector('#completion-screen p').innerText = "Every single word in your Google Sheet is MASTERED.";
+                document.getElementById('completion-msg').innerText = "Every single word in your Google Sheet is MASTERED.";
+                document.querySelector('.secondary-btn').classList.add('hidden');
             } else {
-                // Shuffle all unmastered words randomly
-                unmastered.sort(() => Math.random() - 0.5);
+                // Grab exactly 35 sequential words to form today's batch limit
+                currentBatchTotal = Math.min(BATCH_SIZE, unmastered.length);
+                let dailyBatch = unmastered.slice(0, currentBatchTotal);
+                masteredInBatch = 0;
                 
-                // Grab exactly 30 words to form today's batch limit
-                let dailyBatch = unmastered.slice(0, BATCH_SIZE);
-                
-                // Out of those 30, slice the first 10 into the Active Pool, rest go to Waiting Room
-                activePool = dailyBatch.splice(0, POOL_SIZE);
+                // Out of those 35, slice the first 10 into the Active Pool, rest go to Waiting Room
+                activePool = dailyBatch.splice(0, Math.min(POOL_SIZE, currentBatchTotal));
                 waitingRoom = dailyBatch;
 
                 document.getElementById('setup-screen').classList.add('hidden');
@@ -220,7 +236,7 @@
             }
         } catch (err) {
             console.error('Fetch error:', err);
-            alert('Failed to connect to Google Sheet.\n\nMake sure your Apps Script Deployment permission is set to "Who has access: Anyone".');
+            alert('Failed to connect to Google Sheet. Make sure your Apps Script URL is correct.');
         } finally {
             document.getElementById('load-btn').classList.remove('hidden');
             document.getElementById('loading-spinner').classList.add('hidden');
@@ -239,8 +255,7 @@
         document.getElementById('card-back').innerText = current.back;
         document.getElementById('card-status').innerText = current.status ? `Status: ${current.status}` : 'Status: New';
         
-        const totalLeft = activePool.length + waitingRoom.length;
-        document.getElementById('progress-text').innerText = `${totalLeft} words remaining in today's batch`;
+        document.getElementById('progress-text').innerText = `Batch Progress: ${masteredInBatch} / ${currentBatchTotal} Mastered`;
         document.getElementById('pool-text').innerText = `🔥 Active Focus Arena: ${activePool.length} words`;
         
         setupExtraLayer();
@@ -265,7 +280,7 @@
 
     async function handleCorrect(event) {
         event.stopPropagation();
-        let currentCard = activePool.shift(); // Remove from active arena
+        let currentCard = activePool.shift(); 
         
         let newStatus = '✓';
         if (currentCard.status === '✓') newStatus = '✓✓';
@@ -273,13 +288,13 @@
 
         sendUpdateToSheet(currentCard.rowIndex, newStatus);
 
-        // If not yet MASTERED, send it to the back of the Waiting Room line!
         if (newStatus !== 'MASTERED') {
             currentCard.status = newStatus;
-            waitingRoom.push(currentCard);
+            waitingRoom.push(currentCard); 
+        } else {
+            masteredInBatch++;
         }
 
-        // Guaranteed Refill Loop: Keeps arena topped up at 10 words as long as waiting room has words
         while (activePool.length < POOL_SIZE && waitingRoom.length > 0) {
             activePool.push(waitingRoom.shift());
         }
@@ -295,8 +310,6 @@
         sendUpdateToSheet(currentCard.rowIndex, newStatus);
 
         currentCard.status = newStatus;
-        
-        // TRAPPED: Push it back into the 10-word pool so you face it again soon!
         activePool.push(currentCard);
 
         checkQueueOrNext();
@@ -308,9 +321,11 @@
     }
 
     function checkQueueOrNext() {
-        if (activePool.length === 0 && waitingRoom.length === 0) {
+        if (masteredInBatch >= currentBatchTotal || (activePool.length === 0 && waitingRoom.length === 0)) {
             document.getElementById('card-screen').classList.add('hidden');
             document.getElementById('completion-screen').classList.remove('hidden');
+            document.querySelector('.secondary-btn').classList.remove('hidden');
+            document.getElementById('completion-msg').innerText = `You successfully mastered your ${currentBatchTotal}-word sequential batch.`;
         } else {
             renderCard();
         }
@@ -331,11 +346,11 @@
         }
     }
 
-    function flipCard() {
+    function flipCard(event) {
+        if(event) event.stopPropagation();
         const cardElement = document.getElementById('flashcard');
-        cardElement.classList.toggle('flipped'); // Allows infinite flipping back and forth
+        cardElement.classList.toggle('flipped'); 
         
-        // Ensure the control buttons stay visible once the answer is revealed
         document.getElementById('reveal-btn').classList.add('hidden');
         document.getElementById('anki-controls').classList.remove('hidden');
     }
@@ -344,6 +359,7 @@
         document.getElementById('card-screen').classList.add('hidden');
         document.getElementById('completion-screen').classList.add('hidden');
         document.getElementById('setup-screen').classList.remove('hidden');
+        document.getElementById('load-btn').classList.remove('hidden');
     }
 </script>
 
