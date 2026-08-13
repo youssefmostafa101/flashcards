@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sequential Daily Flashcards</title>
+    <title>Language Mastery Hub</title>
     <style>
         :root {
             --bg: #0b0f19;
@@ -15,24 +15,68 @@
             --accent-glow: rgba(99, 102, 241, 0.2);
             --hard-btn: #ef4444;
             --easy-btn: #10b981;
+            --nav-bg: #111524;
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background: var(--bg);
             color: var(--text-main);
+            margin: 0;
+            padding: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
             min-height: 100vh;
-            margin: 0;
-            padding: 16px;
+        }
+        
+        /* Navbar */
+        nav {
+            width: 100%;
+            background: var(--nav-bg);
+            padding: 12px 16px;
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            border-bottom: 1px solid #2e344e;
             box-sizing: border-box;
         }
-        .container { width: 100%; max-width: 500px; display: flex; flex-direction: column; }
-        h2 { text-align: center; margin-bottom: 8px; font-weight: 700; letter-spacing: -0.025em;}
+        .nav-btn {
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid transparent;
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+        .nav-btn.active {
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--accent);
+            border: 1px solid var(--accent);
+        }
+        .nav-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .container { 
+            width: 100%; 
+            max-width: 500px; 
+            display: flex; 
+            flex-direction: column; 
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        
+        h2 { text-align: center; margin-bottom: 8px; font-weight: 700; }
         p.subtitle { text-align: center; color: var(--text-muted); font-size: 14px; margin-top: 0; margin-bottom: 24px;}
         
         .form-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+        .row-group { display: flex; gap: 12px; }
+        .row-group .form-group { flex: 1; }
+        
         label { font-size: 14px; font-weight: 600; color: var(--text-muted); }
         input, select {
             background: #111524; color: var(--text-main); border: 1px solid #2e344e;
@@ -43,8 +87,7 @@
         button.primary-btn {
             background: var(--accent); color: white; border: none; padding: 14px;
             font-weight: 600; border-radius: 12px; cursor: pointer; margin-top: 8px; font-size: 16px;
-            box-shadow: 0 4px 12px var(--accent-glow);
-            width: 100%;
+            box-shadow: 0 4px 12px var(--accent-glow); width: 100%;
         }
         button.secondary-btn {
             background: #1e2235; color: var(--text-main); border: 1px solid #2e344e; padding: 14px;
@@ -52,13 +95,16 @@
             width: 100%;
         }
         .hidden { display: none !important; }
+
+        /* Shared Dashboard Panels */
+        .panel { background: #111524; border: 1px solid #2e344e; border-radius: 12px; padding: 20px; margin-bottom: 20px; text-align: center; }
+        .large-text { font-size: 32px; font-weight: 700; margin: 20px 0; }
         
-        /* Flashcard Layout */
+        /* Flashcards */
         .card-container { perspective: 1000px; width: 100%; height: 340px; margin-top: 10px; }
         .card {
             width: 100%; height: 100%; position: relative; transform-style: preserve-3d;
-            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-            cursor: pointer;
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer;
         }
         .card.flipped { transform: rotateY(180deg); }
         .front, .back {
@@ -79,60 +125,117 @@
         .audio-btn:active { background: var(--accent); }
         .audio-btn svg { width: 22px; height: 22px; fill: var(--text-main); }
 
-        .extra-wrapper { width: 100%; min-height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .extra-btn { background: #22253a; color: var(--text-muted); border: 1px dashed #4b526d; padding: 8px 16px; font-size: 13px; border-radius: 20px; cursor: pointer; }
-        .extra-text { font-size: 18px; color: #10b981; font-weight: 500; text-align: center; }
-
         .control-panel { margin-top: 24px; width: 100%; }
-        .reveal-btn {
-            width: 100%; background: #1e2235; color: var(--accent); border: 1px solid var(--accent);
-            padding: 16px; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer;
-        }
         .anki-controls { display: flex; gap: 12px; width: 100%; }
-        .anki-btn {
-            flex: 1; padding: 16px; border: none; border-radius: 12px; font-size: 15px; font-weight: 600;
-            cursor: pointer; color: white; transition: opacity 0.2s;
-        }
+        .anki-btn { flex: 1; padding: 16px; border: none; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; color: white; }
         .anki-btn.hard { background: var(--hard-btn); }
         .anki-btn.easy { background: var(--easy-btn); }
         
         .progress-box { background: #111524; border: 1px solid #2e344e; border-radius: 12px; padding: 12px; margin-bottom: 16px; display: flex; flex-direction: column; align-items: center; }
-        .progress { font-size: 16px; color: var(--text-main); font-weight: 700; margin-bottom: 4px;}
-        .pool-indicator { font-size: 13px; color: #6366f1; font-weight: 600; }
         .status-badge { font-size: 12px; background: #2a3047; padding: 4px 10px; border-radius: 12px; color: #a5b4fc; margin-bottom: 8px;}
-        .reset-link { text-align: center; color: var(--text-muted); margin-top: 32px; font-size: 14px; cursor: pointer; text-decoration: underline; }
-        .loading { text-align: center; font-size: 16px; color: var(--accent); margin-top: 20px; }
+        
+        /* Writing */
+        .write-input { font-size: 24px; text-align: center; padding: 16px; margin: 20px 0; width: 100%; box-sizing: border-box; }
+        .write-progress { color: var(--easy-btn); font-weight: 700; margin-top: 10px;}
+
+        /* Video Embed */
+        .video-container { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 12px; margin-top: 20px;}
+        .video-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
     </style>
 </head>
 <body>
 
-<div class="container" id="setup-screen">
-    <h2>Google Sheets Sync</h2>
-    <p class="subtitle">Sequential 35-Word Batch | 10-Word Focus Pool</p>
+<nav>
+    <button class="nav-btn active" id="nav-setup" onclick="switchTab('setup')">⚙️ Setup</button>
+    <button class="nav-btn" id="nav-listen" onclick="switchTab('listen')" disabled>🎧 Listen</button>
+    <button class="nav-btn" id="nav-write" onclick="switchTab('write')" disabled>✍️ Write</button>
+    <button class="nav-btn" id="nav-vocab" onclick="switchTab('vocab')" disabled>🃏 Vocab</button>
+    <button class="nav-btn" id="nav-grammar" onclick="switchTab('grammar')">📺 Grammar</button>
+    <button class="nav-btn" id="nav-ai" onclick="switchTab('ai')">🎙️ AI</button>
+</nav>
+
+<!-- SETUP TAB -->
+<div class="container" id="tab-setup">
+    <h2>Daily Setup</h2>
+    <p class="subtitle">Configure your 35-word sequential batch</p>
     
     <div class="form-group">
-        <label for="sheet-url">Google Apps Script Web App URL:</label>
+        <label>Google Apps Script Web App URL:</label>
         <input type="text" id="sheet-url" placeholder="https://script.google.com/macros/s/.../exec">
     </div>
 
     <div class="form-group">
-        <label for="voice-lang">Target Language Audio:</label>
+        <label>Target Language:</label>
         <select id="voice-lang">
             <option value="de-DE">German (Deutsch)</option>
             <option value="ru-RU">Russian (Русский)</option>
-            <option value="en-US">English (US)</option>
-            <option value="en-GB">English (UK)</option>
         </select>
     </div>
+
+    <div class="row-group">
+        <div class="form-group">
+            <label>Audio Repeats:</label>
+            <select id="audio-reps">
+                <option value="1">1 Time</option>
+                <option value="2">2 Times</option>
+                <option value="3" selected>3 Times</option>
+                <option value="4">4 Times</option>
+                <option value="5">5 Times</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Audio Speed:</label>
+            <select id="audio-speed">
+                <option value="0.5">0.5x (Very Slow)</option>
+                <option value="0.75" selected>0.75x (Slow)</option>
+                <option value="1.0">1.0x (Normal)</option>
+            </select>
+        </div>
+    </div>
     
-    <button class="primary-btn" id="load-btn" onclick="fetchFromSheet()">Load Next 35 Words</button>
-    <div id="loading-spinner" class="loading hidden">Syncing with Google Sheets...</div>
+    <button class="primary-btn" id="load-btn" onclick="fetchFromSheet()">Load Today's 35 Words</button>
+    <div id="loading-spinner" class="panel hidden" style="color: var(--accent); margin-top: 10px;">Syncing with Google Sheets...</div>
 </div>
 
-<div class="container hidden" id="card-screen">
+<!-- LISTENING TAB -->
+<div class="container hidden" id="tab-listen">
+    <h2>Listening Mode</h2>
+    <p class="subtitle">Focus on pronunciation. Loops automatically.</p>
+    
+    <div class="panel">
+        <div id="listen-counter" style="color: var(--text-muted); font-size: 14px;">Word 1 of 35</div>
+        <div class="large-text" id="listen-word">-</div>
+        <button class="primary-btn" id="listen-play-btn" onclick="startListeningCycle()">▶️ Start Audio Cycle</button>
+        <button class="secondary-btn hidden" id="listen-stop-btn" onclick="stopListeningCycle()">⏸️ Stop Audio</button>
+    </div>
+</div>
+
+<!-- WRITING TAB -->
+<div class="container hidden" id="tab-write">
+    <h2>Writing Mode</h2>
+    <p class="subtitle">Type the word 3 times. No autocomplete.</p>
+    
+    <div class="panel">
+        <div id="write-counter" style="color: var(--text-muted); font-size: 14px;">Word 1 of 35</div>
+        <button class="audio-btn" style="margin: 10px auto;" onclick="speakCurrentWriteWord()">
+            <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+        </button>
+        <div class="large-text" id="write-word">-</div>
+        
+        <input type="text" class="write-input" id="write-input" 
+               autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" 
+               placeholder="Type here..." oninput="checkWritingInput()">
+               
+        <div class="write-progress" id="write-reps-text">0 / 3 Correct</div>
+    </div>
+</div>
+
+<!-- VOCAB TAB (Flashcards) -->
+<div class="container hidden" id="tab-vocab">
+    <h2>Vocab Mastery</h2>
     <div class="progress-box">
-        <div class="progress" id="progress-text">Batch Progress: 0 / 35 Mastered</div>
-        <div class="pool-indicator" id="pool-text">🔥 Active Focus Arena: 10 words</div>
+        <div style="font-weight: 700;" id="progress-text">Batch Progress: 0 / 35 Mastered</div>
+        <div style="font-size: 13px; color: #6366f1; margin-top:4px;" id="pool-text">🔥 Active Focus Arena: 10 words</div>
     </div>
     
     <div class="card-container" onclick="flipCard()">
@@ -140,153 +243,272 @@
             <div class="front">
                 <span class="status-badge" id="card-status">Status: New</span>
                 <div id="card-front">Front</div>
-                <button class="audio-btn" onclick="speakText(event)">
+                <button class="audio-btn" onclick="speakVocab(event)">
                     <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
                 </button>
             </div>
             <div class="back">
-                <div style="height:20px;"></div> 
                 <div class="back-content" id="card-back">Back</div>
-                <div class="extra-wrapper" id="extra-layer"></div>
             </div>
         </div>
     </div>
     
     <div class="control-panel">
-        <button id="reveal-btn" class="reveal-btn" onclick="flipCard(event)">Show Answer</button>
+        <button id="reveal-btn" class="secondary-btn" onclick="flipCard(event)">Show Answer</button>
         <div id="anki-controls" class="anki-controls hidden">
-            <button class="anki-btn hard" onclick="handleMiss(event)">🔴 Missed It</button>
+            <button class="anki-btn hard" onclick="handleMiss(event)">🔴 Missed</button>
             <button class="anki-btn easy" onclick="handleCorrect(event)">🟢 Got It</button>
         </div>
     </div>
-    <div class="reset-link" onclick="resetApp()">← Disconnect / Settings</div>
 </div>
 
-<div class="container hidden" id="completion-screen" style="text-align: center; margin-top: 40px;">
-    <h1>🎉</h1>
-    <h2>Daily Goal Reached!</h2>
-    <p class="subtitle" id="completion-msg">You successfully mastered your 35-word sequential batch.</p>
-    <button class="primary-btn" onclick="resetApp()">Done for Today</button>
-    <button class="secondary-btn" onclick="fetchFromSheet()">Load Next 35 Words</button>
+<!-- GRAMMAR TAB -->
+<div class="container hidden" id="tab-grammar">
+    <h2>Grammar Hub</h2>
+    <p class="subtitle">Watch 1 video today.</p>
+    
+    <div class="form-group">
+        <select id="grammar-select" onchange="loadGrammarPlaylist()">
+            <option value="PLVFU_EhK40pOsRfACVqtOMooENGNmF3jB">German Playlist</option>
+            <option value="PLVFU_EhK40pPji3qW1ieT3PoZG-yt20Uz">Russian Playlist</option>
+        </select>
+    </div>
+    
+    <div class="video-container">
+        <iframe id="grammar-frame" src="https://www.youtube.com/embed/videoseries?list=PLVFU_EhK40pOsRfACVqtOMooENGNmF3jB" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+    </div>
+</div>
+
+<!-- AI CONVO TAB -->
+<div class="container hidden" id="tab-ai">
+    <h2>AI Convo Lounge</h2>
+    <p class="subtitle">Your output workspace</p>
+    <div class="panel">
+        <p style="text-align: left; font-size: 14px; line-height: 1.5;">
+            <strong>Suggested Prompts:</strong><br>
+            • "Act as a native speaker and roleplay ordering food in [Language]."<br>
+            • "I will write a paragraph in [Language]. Correct my grammar."<br>
+            • "Let's do a Whisper-flow voice memo session."
+        </p>
+        <a href="https://chatgpt.com/" target="_blank" style="text-decoration: none;">
+            <button class="primary-btn">Open ChatGPT</button>
+        </a>
+        <a href="https://gemini.google.com/" target="_blank" style="text-decoration: none;">
+            <button class="secondary-btn">Open Gemini</button>
+        </a>
+    </div>
 </div>
 
 <script>
-    const BATCH_SIZE = 35; 
-    const POOL_SIZE = 10;  
-    
-    let activePool = [];
-    let waitingRoom = [];
+    // Global State
+    let masterBatch = [];
     let scriptUrl = '';
-    let chosenLanguage = 'de-DE';
-    let masteredInBatch = 0;
-    let currentBatchTotal = 0;
-
-    window.onload = function() {
-        if (localStorage.getItem('fc_script_url')) {
-            document.getElementById('sheet-url').value = localStorage.getItem('fc_script_url');
-        }
-        if (localStorage.getItem('fc_saved_lang')) {
-            document.getElementById('voice-lang').value = localStorage.getItem('fc_saved_lang');
-        }
+    let lang = 'de-DE';
+    
+    // UI Navigation
+    function switchTab(tabId) {
+        document.querySelectorAll('.container').forEach(c => c.classList.add('hidden'));
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        
+        document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+        document.getElementById(`nav-${tabId}`).classList.add('active');
+        
+        if(tabId !== 'listen') stopListeningCycle();
+        if(tabId === 'write' && masterBatch.length > 0) initWritingMode();
     }
 
+    window.onload = function() {
+        if (localStorage.getItem('hub_url')) document.getElementById('sheet-url').value = localStorage.getItem('hub_url');
+        if (localStorage.getItem('hub_lang')) document.getElementById('voice-lang').value = localStorage.getItem('hub_lang');
+    }
+
+    // Data Fetching
     async function fetchFromSheet() {
         scriptUrl = document.getElementById('sheet-url').value.trim();
-        chosenLanguage = document.getElementById('voice-lang').value;
+        lang = document.getElementById('voice-lang').value;
         
-        if (!scriptUrl) return alert('Please paste your Google Apps Script URL!');
+        if (!scriptUrl) return alert('Paste your Script URL!');
         
-        localStorage.setItem('fc_script_url', scriptUrl);
-        localStorage.setItem('fc_saved_lang', chosenLanguage);
+        localStorage.setItem('hub_url', scriptUrl);
+        localStorage.setItem('hub_lang', lang);
 
-        document.getElementById('setup-screen').classList.add('hidden');
-        document.getElementById('completion-screen').classList.add('hidden');
-        document.getElementById('setup-screen').classList.remove('hidden');
         document.getElementById('load-btn').classList.add('hidden');
         document.getElementById('loading-spinner').classList.remove('hidden');
 
         try {
             const response = await fetch(scriptUrl, { redirect: 'follow' });
-            if (!response.ok) throw new Error('Network response was not ok');
-            
             const data = await response.json();
-
-            // Filter out MASTERED words. NO SHUFFLING to maintain list organization.
+            
             let unmastered = data.filter(item => item.status !== 'MASTERED');
-
+            
             if (unmastered.length === 0) {
-                document.getElementById('setup-screen').classList.add('hidden');
-                document.getElementById('completion-screen').classList.remove('hidden');
-                document.querySelector('#completion-screen h2').innerText = "All Sheets Cleared!";
-                document.getElementById('completion-msg').innerText = "Every single word in your Google Sheet is MASTERED.";
-                document.querySelector('.secondary-btn').classList.add('hidden');
+                alert("All words mastered!");
             } else {
-                // Grab exactly 35 sequential words to form today's batch limit
-                currentBatchTotal = Math.min(BATCH_SIZE, unmastered.length);
-                let dailyBatch = unmastered.slice(0, currentBatchTotal);
-                masteredInBatch = 0;
+                masterBatch = unmastered.slice(0, 35);
                 
-                // Out of those 35, slice the first 10 into the Active Pool, rest go to Waiting Room
-                activePool = dailyBatch.splice(0, Math.min(POOL_SIZE, currentBatchTotal));
-                waitingRoom = dailyBatch;
-
-                document.getElementById('setup-screen').classList.add('hidden');
-                document.getElementById('card-screen').classList.remove('hidden');
-                renderCard();
+                // Unlock tabs
+                ['listen', 'write', 'vocab'].forEach(id => {
+                    document.getElementById(`nav-${id}`).disabled = false;
+                });
+                
+                initFlashcards();
+                switchTab('listen'); // Auto-flow to listening first
             }
         } catch (err) {
-            console.error('Fetch error:', err);
-            alert('Failed to connect to Google Sheet. Make sure your Apps Script URL is correct.');
+            alert('Connection failed. Check URL.');
         } finally {
             document.getElementById('load-btn').classList.remove('hidden');
             document.getElementById('loading-spinner').classList.add('hidden');
         }
     }
 
-    function renderCard() {
-        const cardElement = document.getElementById('flashcard');
-        cardElement.style.transition = 'none';
-        cardElement.classList.remove('flipped');
-        void cardElement.offsetWidth;
-        cardElement.style.transition = 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+    // Central TTS Engine
+    function speakText(text, rate = 1.0) {
+        return new Promise(resolve => {
+            if (!('speechSynthesis' in window)) return resolve();
+            window.speechSynthesis.cancel();
+            
+            let u = new SpeechSynthesisUtterance(text);
+            u.lang = lang;
+            u.rate = rate;
+            u.onend = resolve;
+            u.onerror = resolve;
+            
+            let voices = window.speechSynthesis.getVoices();
+            let voice = voices.find(v => v.lang.startsWith(lang.split('-')[0]));
+            if (voice) u.voice = voice;
+            
+            window.speechSynthesis.speak(u);
+        });
+    }
 
+    function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    // 1. Listening Mode Logic
+    let isListening = false;
+    async function startListeningCycle() {
+        if (masterBatch.length === 0) return;
+        isListening = true;
+        document.getElementById('listen-play-btn').classList.add('hidden');
+        document.getElementById('listen-stop-btn').classList.remove('hidden');
+        
+        let reps = parseInt(document.getElementById('audio-reps').value);
+        let speed = parseFloat(document.getElementById('audio-speed').value);
+        
+        for (let i = 0; i < masterBatch.length; i++) {
+            if (!isListening) break;
+            
+            document.getElementById('listen-counter').innerText = `Word ${i+1} of ${masterBatch.length}`;
+            document.getElementById('listen-word').innerText = masterBatch[i].front;
+            
+            for (let r = 0; r < reps; r++) {
+                if (!isListening) break;
+                await speakText(masterBatch[i].front, speed);
+                await sleep(1000); 
+            }
+            if(isListening) await sleep(1500); // Pause before next word
+        }
+        stopListeningCycle();
+    }
+    
+    function stopListeningCycle() {
+        isListening = false;
+        window.speechSynthesis.cancel();
+        document.getElementById('listen-play-btn').classList.remove('hidden');
+        document.getElementById('listen-stop-btn').classList.add('hidden');
+    }
+
+    // 2. Writing Mode Logic
+    let writeIndex = 0;
+    let currentWriteReps = 0;
+    
+    function initWritingMode() {
+        if(writeIndex >= masterBatch.length) return;
+        currentWriteReps = 0;
+        updateWriteUI();
+    }
+    
+    function updateWriteUI() {
+        document.getElementById('write-counter').innerText = `Word ${writeIndex + 1} of ${masterBatch.length}`;
+        document.getElementById('write-word').innerText = masterBatch[writeIndex].back; // Show English
+        document.getElementById('write-reps-text').innerText = `${currentWriteReps} / 3 Correct`;
+        document.getElementById('write-input').value = '';
+        document.getElementById('write-input').focus();
+    }
+    
+    function checkWritingInput() {
+        let inputField = document.getElementById('write-input');
+        let target = masterBatch[writeIndex].front.toLowerCase().trim();
+        let current = inputField.value.toLowerCase().trim();
+        
+        if (current === target) {
+            currentWriteReps++;
+            document.getElementById('write-reps-text').innerText = `${currentWriteReps} / 3 Correct`;
+            inputField.value = '';
+            
+            if (currentWriteReps >= 3) {
+                writeIndex++;
+                if (writeIndex < masterBatch.length) {
+                    updateWriteUI();
+                } else {
+                    document.getElementById('write-word').innerText = "Writing Complete!";
+                    inputField.classList.add('hidden');
+                }
+            }
+        }
+    }
+    function speakCurrentWriteWord() {
+        speakText(masterBatch[writeIndex].front, parseFloat(document.getElementById('audio-speed').value));
+    }
+
+    // 3. Vocab/Flashcard Logic (Preserved Sequential Engine)
+    let activePool = [];
+    let waitingRoom = [];
+    let masteredInBatch = 0;
+    
+    function initFlashcards() {
+        let poolSize = Math.min(10, masterBatch.length);
+        activePool = masterBatch.slice(0, poolSize);
+        waitingRoom = masterBatch.slice(poolSize);
+        masteredInBatch = 0;
+        renderCard();
+    }
+
+    function renderCard() {
+        if(activePool.length === 0) return;
         const current = activePool[0];
         document.getElementById('card-front').innerText = current.front;
         document.getElementById('card-back').innerText = current.back;
         document.getElementById('card-status').innerText = current.status ? `Status: ${current.status}` : 'Status: New';
-        
-        document.getElementById('progress-text').innerText = `Batch Progress: ${masteredInBatch} / ${currentBatchTotal} Mastered`;
+        document.getElementById('progress-text').innerText = `Batch Progress: ${masteredInBatch} / ${masterBatch.length} Mastered`;
         document.getElementById('pool-text').innerText = `🔥 Active Focus Arena: ${activePool.length} words`;
         
-        setupExtraLayer();
-        
+        document.getElementById('flashcard').classList.remove('flipped');
         document.getElementById('reveal-btn').classList.remove('hidden');
         document.getElementById('anki-controls').classList.add('hidden');
     }
 
-    function setupExtraLayer() {
-        const layer = document.getElementById('extra-layer');
-        if (!activePool[0].extra || activePool[0].extra === '') {
-            layer.innerHTML = '';
-            return;
-        }
-        layer.innerHTML = `<button class="extra-btn" onclick="revealExtra(event)">Reveal Backup Context</button>`;
+    function flipCard(e) {
+        if(e) e.stopPropagation();
+        document.getElementById('flashcard').classList.toggle('flipped');
+        document.getElementById('reveal-btn').classList.add('hidden');
+        document.getElementById('anki-controls').classList.remove('hidden');
     }
 
-    function revealExtra(event) {
-        event.stopPropagation();
-        document.getElementById('extra-layer').innerHTML = `<div class="extra-text">${activePool[0].extra}</div>`;
+    function speakVocab(e) {
+        if(e) e.stopPropagation();
+        speakText(activePool[0].front, 1.0);
     }
 
-    async function handleCorrect(event) {
-        event.stopPropagation();
+    async function handleCorrect(e) {
+        e.stopPropagation();
         let currentCard = activePool.shift(); 
         
         let newStatus = '✓';
         if (currentCard.status === '✓') newStatus = '✓✓';
         else if (currentCard.status === '✓✓') newStatus = 'MASTERED';
 
-        sendUpdateToSheet(currentCard.rowIndex, newStatus);
+        fetch(`${scriptUrl}?action=update&row=${currentCard.rowIndex}&status=${encodeURIComponent(newStatus)}`, { mode: 'no-cors' });
 
         if (newStatus !== 'MASTERED') {
             currentCard.status = newStatus;
@@ -295,71 +517,33 @@
             masteredInBatch++;
         }
 
-        while (activePool.length < POOL_SIZE && waitingRoom.length > 0) {
-            activePool.push(waitingRoom.shift());
-        }
-
-        checkQueueOrNext();
-    }
-
-    async function handleMiss(event) {
-        event.stopPropagation();
-        let currentCard = activePool.shift();
+        while (activePool.length < 10 && waitingRoom.length > 0) activePool.push(waitingRoom.shift());
         
-        let newStatus = '';
-        sendUpdateToSheet(currentCard.rowIndex, newStatus);
+        checkVocabQueue();
+    }
 
-        currentCard.status = newStatus;
+    async function handleMiss(e) {
+        e.stopPropagation();
+        let currentCard = activePool.shift();
+        fetch(`${scriptUrl}?action=update&row=${currentCard.rowIndex}&status=`, { mode: 'no-cors' });
+        currentCard.status = '';
         activePool.push(currentCard);
-
-        checkQueueOrNext();
+        checkVocabQueue();
     }
 
-    function sendUpdateToSheet(rowIndex, newStatus) {
-        const updateUrl = `${scriptUrl}?action=update&row=${rowIndex}&status=${encodeURIComponent(newStatus)}`;
-        fetch(updateUrl, { mode: 'no-cors' }).catch(err => console.error("Sheet update failed", err));
-    }
-
-    function checkQueueOrNext() {
-        if (masteredInBatch >= currentBatchTotal || (activePool.length === 0 && waitingRoom.length === 0)) {
-            document.getElementById('card-screen').classList.add('hidden');
-            document.getElementById('completion-screen').classList.remove('hidden');
-            document.querySelector('.secondary-btn').classList.remove('hidden');
-            document.getElementById('completion-msg').innerText = `You successfully mastered your ${currentBatchTotal}-word sequential batch.`;
+    function checkVocabQueue() {
+        if (masteredInBatch >= masterBatch.length) {
+            document.getElementById('card-front').innerText = "Batch Complete!";
+            document.getElementById('card-back').innerText = "Great Job.";
         } else {
             renderCard();
         }
     }
 
-    function speakText(event) {
-        event.stopPropagation(); 
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel();
-            const utterance = new SpeechSynthesisUtterance(activePool[0].front);
-            utterance.lang = chosenLanguage;
-            
-            const voices = window.speechSynthesis.getVoices();
-            const matchingVoice = voices.find(v => v.lang.startsWith(chosenLanguage.split('-')[0]));
-            if (matchingVoice) utterance.voice = matchingVoice;
-            
-            window.speechSynthesis.speak(utterance);
-        }
-    }
-
-    function flipCard(event) {
-        if(event) event.stopPropagation();
-        const cardElement = document.getElementById('flashcard');
-        cardElement.classList.toggle('flipped'); 
-        
-        document.getElementById('reveal-btn').classList.add('hidden');
-        document.getElementById('anki-controls').classList.remove('hidden');
-    }
-
-    function resetApp() {
-        document.getElementById('card-screen').classList.add('hidden');
-        document.getElementById('completion-screen').classList.add('hidden');
-        document.getElementById('setup-screen').classList.remove('hidden');
-        document.getElementById('load-btn').classList.remove('hidden');
+    // 4. Grammar Logic
+    function loadGrammarPlaylist() {
+        let playlistId = document.getElementById('grammar-select').value;
+        document.getElementById('grammar-frame').src = `https://www.youtube.com/embed/videoseries?list=${playlistId}`;
     }
 </script>
 
