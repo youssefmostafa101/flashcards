@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Language Mastery Hub</title>
-    <!-- Custom Dark/Accent Favicon -->
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%230b0f19'/><rect x='20' y='20' width='60' height='60' rx='12' fill='%231e2235' stroke='%236366f1' stroke-width='6'/><path d='M35 42 h30 M35 58 h20' stroke='%236366f1' stroke-width='6' stroke-linecap='round'/></svg>">
+    <!-- 📖 Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
     <style>
         :root {
             --bg: #0b0f19;
@@ -153,7 +153,8 @@
 
         /* Listening Controls */
         .listen-controls { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-top: 20px; }
-        .listen-nav-btn { background: #2a3047; border: none; color: white; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; }
+        .listen-nav-btn { background: #2a3047; border: none; color: white; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; flex: 1; margin: 0 5px;}
+        .listen-nav-btn:active { background: #3b4261; }
         .listen-list { max-height: 180px; overflow-y: auto; background: #0b0f19; border: 1px solid #2e344e; border-radius: 8px; margin-top: 20px; text-align: left; padding: 8px; }
         .listen-list-item { padding: 8px 12px; border-bottom: 1px solid #1e2235; cursor: pointer; font-size: 14px; }
         .listen-list-item:hover { background: #1e2235; }
@@ -180,19 +181,14 @@
 <!-- SETUP TAB -->
 <div class="container" id="tab-setup">
     <h2>Daily Setup</h2>
-    <p class="subtitle">Configure your word batch & language</p>
+    <p class="subtitle">Select your language & config</p>
     
     <div class="form-group">
-        <label>Target Language Preset:</label>
-        <select id="voice-lang" onchange="handlePresetChange()">
+        <label>Target Language:</label>
+        <select id="voice-lang">
             <option value="de-DE">German (Deutsch)</option>
             <option value="ru-RU">Russian (Русский)</option>
         </select>
-    </div>
-
-    <div class="form-group">
-        <label>Google Apps Script Web App URL:</label>
-        <input type="text" id="sheet-url" placeholder="https://script.google.com/macros/s/.../exec">
     </div>
 
     <div class="row-group">
@@ -224,7 +220,7 @@
     </div>
     
     <button class="primary-btn" id="load-btn" onclick="fetchFromSheet()">Load Today's Words</button>
-    <div id="loading-spinner" class="panel hidden" style="color: var(--accent); margin-top: 10px;">Syncing with Google Sheets...</div>
+    <div id="loading-spinner" class="panel hidden" style="color: var(--accent); margin-top: 10px;">Syncing with Database...</div>
 </div>
 
 <!-- READING TAB -->
@@ -245,7 +241,9 @@
         <div id="listen-counter" style="color: var(--text-muted); font-size: 14px;">-</div>
         <div class="large-text" id="listen-word">-</div>
         
-        <button class="primary-btn" id="listen-play-btn" onclick="toggleListening()">▶️ Play Cycle</button>
+        <button class="audio-btn" style="margin: 10px auto;" onclick="playCurrentListenWord()">
+            <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+        </button>
         
         <div class="listen-controls">
             <button class="listen-nav-btn" onclick="prevListenWord()">← Prev</button>
@@ -341,18 +339,17 @@
 </div>
 
 <script>
-    // Preset Web App URLs
+    // Hardcoded Sheet Web App URLs
     const PRESETS = {
         'de-DE': 'https://script.google.com/macros/s/AKfycbweLvepwJR9gtIM9ytJZUx8XiTowsMtc2PrnkGakNEse1baaCJcUTU38rU_Mebr3TmBEw/exec',
         'ru-RU': 'https://script.google.com/macros/s/AKfycbxPJTwe9HDw9MGPQ9YOUkLCQEAKTDewAJiEG-DV7vXaF_rWcKVojshgsVmqazbDedxt_w/exec'
     };
 
     let masterBatch = [];
-    let dataCache = {}; // In-memory performance cache
+    let dataCache = {}; 
     let scriptUrl = '';
     let lang = 'de-DE';
     
-    // Pre-warm Speech Synthesis on initial load
     function initTTS() {
         if ('speechSynthesis' in window) {
             window.speechSynthesis.getVoices();
@@ -367,39 +364,25 @@
         document.getElementById(`tab-${tabId}`).classList.remove('hidden');
         document.getElementById(`nav-${tabId}`).classList.add('active');
         
-        if(tabId !== 'listen') stopListeningCycle();
+        window.speechSynthesis.cancel(); // Stop audio immediately on tab switch
+        
         if(tabId === 'read' && masterBatch.length > 0) renderReadingList();
         if(tabId === 'write' && masterBatch.length > 0) initWritingMode();
-        if(tabId === 'listen' && masterBatch.length > 0) renderListenList();
-    }
-
-    function handlePresetChange() {
-        const selectedLang = document.getElementById('voice-lang').value;
-        if (PRESETS[selectedLang]) {
-            document.getElementById('sheet-url').value = PRESETS[selectedLang];
-        }
+        if(tabId === 'listen' && masterBatch.length > 0) updateListenUI();
     }
 
     window.onload = function() {
         initTTS();
-        
         const savedLang = localStorage.getItem('hub_lang') || 'de-DE';
         document.getElementById('voice-lang').value = savedLang;
-
-        const savedUrl = localStorage.getItem('hub_url') || PRESETS[savedLang];
-        document.getElementById('sheet-url').value = savedUrl;
     }
 
     async function fetchFromSheet(forceRefresh = false) {
-        scriptUrl = document.getElementById('sheet-url').value.trim();
         lang = document.getElementById('voice-lang').value;
+        scriptUrl = PRESETS[lang]; // Pull URL directly from presets
         
-        if (!scriptUrl) return alert('Paste your Script URL!');
-        
-        localStorage.setItem('hub_url', scriptUrl);
         localStorage.setItem('hub_lang', lang);
 
-        // Check in-memory cache first unless forced refresh
         if (!forceRefresh && dataCache[scriptUrl]) {
             processLoadedData(dataCache[scriptUrl]);
             return;
@@ -412,10 +395,10 @@
             const response = await fetch(scriptUrl, { redirect: 'follow' });
             const data = await response.json();
             
-            dataCache[scriptUrl] = data; // Cache data in memory
+            dataCache[scriptUrl] = data; 
             processLoadedData(data);
         } catch (err) {
-            alert('Connection failed. Check URL.');
+            alert('Connection failed. Database could not be reached.');
         } finally {
             document.getElementById('load-btn').classList.remove('hidden');
             document.getElementById('loading-spinner').classList.add('hidden');
@@ -423,6 +406,7 @@
     }
 
     function processLoadedData(data) {
+        // Mastered words are explicitly ignored and filtered out entirely
         let unmastered = data.filter(item => item.status !== 'MASTERED');
         
         if (unmastered.length === 0) {
@@ -435,7 +419,7 @@
             });
             
             initFlashcards();
-            switchTab('read'); // Auto-land on Reading tab
+            switchTab('read'); 
         }
     }
 
@@ -480,9 +464,9 @@
         });
     }
 
-    // --- LISTENING ENGINE ---
-    let isListening = false;
+    // --- LISTENING ENGINE (MANUAL) ---
     let listenIndex = 0;
+    let currentListenSession = 0;
     
     function renderListenList() {
         const container = document.getElementById('listen-list-container');
@@ -494,7 +478,6 @@
             div.onclick = () => jumpToListenWord(index);
             container.appendChild(div);
         });
-        updateListenUI();
     }
 
     function updateListenUI() {
@@ -502,51 +485,28 @@
         document.getElementById('listen-counter').innerText = `Word ${listenIndex + 1} of ${masterBatch.length}`;
         document.getElementById('listen-word').innerText = masterBatch[listenIndex].front;
         renderListenList();
+        playCurrentListenWord(); // Auto-play when manually switching
     }
 
-    async function toggleListening() {
-        if(isListening) {
-            stopListeningCycle();
-        } else {
-            isListening = true;
-            document.getElementById('listen-play-btn').innerText = '⏸️ Stop Cycle';
-            runListenCycle();
-        }
-    }
-
-    async function runListenCycle() {
-        let reps = parseInt(document.getElementById('audio-reps').value);
+    async function playCurrentListenWord() {
+        currentListenSession++;
+        let thisSession = currentListenSession; // Tracks rapid clicking
         let speed = parseFloat(document.getElementById('audio-speed').value);
+        let reps = parseInt(document.getElementById('audio-reps').value);
         
-        while (isListening && listenIndex < masterBatch.length) {
-            updateListenUI();
-            
-            for (let r = 0; r < reps; r++) {
-                if (!isListening) break;
-                await speakText(masterBatch[listenIndex].front, speed);
-                await sleep(1000); 
-            }
-            if(isListening) {
-                await sleep(1500); 
-                listenIndex++;
-            }
-        }
-        if(listenIndex >= masterBatch.length) {
-            listenIndex = 0;
-            stopListeningCycle();
-        }
-    }
-    
-    function stopListeningCycle() {
-        isListening = false;
         window.speechSynthesis.cancel();
-        document.getElementById('listen-play-btn').innerText = '▶️ Play Cycle';
+        
+        for(let i = 0; i < reps; i++) {
+            if (thisSession !== currentListenSession) break; // Break if user clicked next
+            await speakText(masterBatch[listenIndex].front, speed);
+            if (thisSession !== currentListenSession) break;
+            if (i < reps - 1) await sleep(600); 
+        }
     }
 
     function nextListenWord() {
         if(listenIndex < masterBatch.length - 1) {
             listenIndex++;
-            window.speechSynthesis.cancel();
             updateListenUI();
         }
     }
@@ -554,14 +514,12 @@
     function prevListenWord() {
         if(listenIndex > 0) {
             listenIndex--;
-            window.speechSynthesis.cancel();
             updateListenUI();
         }
     }
     
     function jumpToListenWord(index) {
         listenIndex = index;
-        window.speechSynthesis.cancel();
         updateListenUI();
     }
 
