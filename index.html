@@ -29,7 +29,6 @@
             min-height: 100vh;
         }
         
-        /* Navbar */
         nav {
             width: 100%;
             background: var(--nav-bg);
@@ -56,10 +55,7 @@
             color: var(--accent);
             border: 1px solid var(--accent);
         }
-        .nav-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
+        .nav-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
         .container { 
             width: 100%; 
@@ -96,16 +92,12 @@
         }
         .hidden { display: none !important; }
 
-        /* Shared Dashboard Panels */
         .panel { background: #111524; border: 1px solid #2e344e; border-radius: 12px; padding: 20px; margin-bottom: 20px; text-align: center; }
         .large-text { font-size: 32px; font-weight: 700; margin: 20px 0; }
         
         /* Flashcards */
         .card-container { perspective: 1000px; width: 100%; height: 340px; margin-top: 10px; }
-        .card {
-            width: 100%; height: 100%; position: relative; transform-style: preserve-3d;
-            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer;
-        }
+        .card { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 0.5s; cursor: pointer; }
         .card.flipped { transform: rotateY(180deg); }
         .front, .back {
             position: absolute; width: 100%; height: 100%; backface-visibility: hidden;
@@ -137,10 +129,21 @@
         /* Writing */
         .write-input { font-size: 24px; text-align: center; padding: 16px; margin: 20px 0; width: 100%; box-sizing: border-box; }
         .write-progress { color: var(--easy-btn); font-weight: 700; margin-top: 10px;}
+        .hint-btn { background: #2a3047; color: var(--text-muted); border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; margin-top: 12px; user-select: none; }
+        .hint-btn:active { color: var(--text-main); background: #3b4261; }
+
+        /* Listening Controls */
+        .listen-controls { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-top: 20px; }
+        .listen-nav-btn { background: #2a3047; border: none; color: white; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; }
+        .listen-list { max-height: 150px; overflow-y: auto; background: #0b0f19; border: 1px solid #2e344e; border-radius: 8px; margin-top: 20px; text-align: left; padding: 8px; }
+        .listen-list-item { padding: 8px 12px; border-bottom: 1px solid #1e2235; cursor: pointer; font-size: 14px; }
+        .listen-list-item:hover { background: #1e2235; }
+        .listen-list-item.active-word { color: var(--accent); font-weight: 700; }
 
         /* Video Embed */
-        .video-container { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 12px; margin-top: 20px;}
+        .video-container { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 12px; margin-top: 10px;}
         .video-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        .note { font-size: 13px; color: #10b981; margin-bottom: 16px; text-align: center; background: rgba(16, 185, 129, 0.1); padding: 10px; border-radius: 8px;}
     </style>
 </head>
 <body>
@@ -179,8 +182,6 @@
                 <option value="1">1 Time</option>
                 <option value="2">2 Times</option>
                 <option value="3" selected>3 Times</option>
-                <option value="4">4 Times</option>
-                <option value="5">5 Times</option>
             </select>
         </div>
         <div class="form-group">
@@ -192,6 +193,15 @@
             </select>
         </div>
     </div>
+
+    <div class="form-group">
+        <label>Writing Reps Required:</label>
+        <select id="write-reps-needed">
+            <option value="1">1 Time</option>
+            <option value="3" selected>3 Times</option>
+            <option value="5">5 Times</option>
+        </select>
+    </div>
     
     <button class="primary-btn" id="load-btn" onclick="fetchFromSheet()">Load Today's 35 Words</button>
     <div id="loading-spinner" class="panel hidden" style="color: var(--accent); margin-top: 10px;">Syncing with Google Sheets...</div>
@@ -200,20 +210,27 @@
 <!-- LISTENING TAB -->
 <div class="container hidden" id="tab-listen">
     <h2>Listening Mode</h2>
-    <p class="subtitle">Focus on pronunciation. Loops automatically.</p>
     
-    <div class="panel">
-        <div id="listen-counter" style="color: var(--text-muted); font-size: 14px;">Word 1 of 35</div>
+    <div class="panel" style="padding-bottom: 10px;">
+        <div id="listen-counter" style="color: var(--text-muted); font-size: 14px;">-</div>
         <div class="large-text" id="listen-word">-</div>
-        <button class="primary-btn" id="listen-play-btn" onclick="startListeningCycle()">▶️ Start Audio Cycle</button>
-        <button class="secondary-btn hidden" id="listen-stop-btn" onclick="stopListeningCycle()">⏸️ Stop Audio</button>
+        
+        <button class="primary-btn" id="listen-play-btn" onclick="toggleListening()">▶️ Play Cycle</button>
+        
+        <div class="listen-controls">
+            <button class="listen-nav-btn" onclick="prevListenWord()">← Prev</button>
+            <button class="listen-nav-btn" onclick="nextListenWord()">Next →</button>
+        </div>
+    </div>
+    
+    <div class="listen-list" id="listen-list-container">
+        <!-- JS populates list here -->
     </div>
 </div>
 
 <!-- WRITING TAB -->
 <div class="container hidden" id="tab-write">
     <h2>Writing Mode</h2>
-    <p class="subtitle">Type the word 3 times. No autocomplete.</p>
     
     <div class="panel">
         <div id="write-counter" style="color: var(--text-muted); font-size: 14px;">Word 1 of 35</div>
@@ -227,10 +244,12 @@
                placeholder="Type here..." oninput="checkWritingInput()">
                
         <div class="write-progress" id="write-reps-text">0 / 3 Correct</div>
+        
+        <button class="hint-btn" id="hint-btn" onmousedown="showHint()" onmouseup="hideHint()" ontouchstart="showHint()" ontouchend="hideHint()">Press & Hold for Hint</button>
     </div>
 </div>
 
-<!-- VOCAB TAB (Flashcards) -->
+<!-- VOCAB TAB -->
 <div class="container hidden" id="tab-vocab">
     <h2>Vocab Mastery</h2>
     <div class="progress-box">
@@ -265,7 +284,7 @@
 <!-- GRAMMAR TAB -->
 <div class="container hidden" id="tab-grammar">
     <h2>Grammar Hub</h2>
-    <p class="subtitle">Watch 1 video today.</p>
+    <div class="note">💡 Click the <b>1/X</b> playlist icon in the top right corner of the video to choose your lesson.</div>
     
     <div class="form-group">
         <select id="grammar-select" onchange="loadGrammarPlaylist()">
@@ -282,30 +301,19 @@
 <!-- AI CONVO TAB -->
 <div class="container hidden" id="tab-ai">
     <h2>AI Convo Lounge</h2>
-    <p class="subtitle">Your output workspace</p>
+    <p class="subtitle">Execute your daily prompt</p>
     <div class="panel">
-        <p style="text-align: left; font-size: 14px; line-height: 1.5;">
-            <strong>Suggested Prompts:</strong><br>
-            • "Act as a native speaker and roleplay ordering food in [Language]."<br>
-            • "I will write a paragraph in [Language]. Correct my grammar."<br>
-            • "Let's do a Whisper-flow voice memo session."
-        </p>
-        <a href="https://chatgpt.com/" target="_blank" style="text-decoration: none;">
-            <button class="primary-btn">Open ChatGPT</button>
-        </a>
         <a href="https://gemini.google.com/" target="_blank" style="text-decoration: none;">
-            <button class="secondary-btn">Open Gemini</button>
+            <button class="primary-btn" style="padding: 20px; font-size: 18px;">✨ Open Gemini Workspace</button>
         </a>
     </div>
 </div>
 
 <script>
-    // Global State
     let masterBatch = [];
     let scriptUrl = '';
     let lang = 'de-DE';
     
-    // UI Navigation
     function switchTab(tabId) {
         document.querySelectorAll('.container').forEach(c => c.classList.add('hidden'));
         document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -315,6 +323,7 @@
         
         if(tabId !== 'listen') stopListeningCycle();
         if(tabId === 'write' && masterBatch.length > 0) initWritingMode();
+        if(tabId === 'listen' && masterBatch.length > 0) renderListenList();
     }
 
     window.onload = function() {
@@ -322,7 +331,6 @@
         if (localStorage.getItem('hub_lang')) document.getElementById('voice-lang').value = localStorage.getItem('hub_lang');
     }
 
-    // Data Fetching
     async function fetchFromSheet() {
         scriptUrl = document.getElementById('sheet-url').value.trim();
         lang = document.getElementById('voice-lang').value;
@@ -346,13 +354,12 @@
             } else {
                 masterBatch = unmastered.slice(0, 35);
                 
-                // Unlock tabs
                 ['listen', 'write', 'vocab'].forEach(id => {
                     document.getElementById(`nav-${id}`).disabled = false;
                 });
                 
                 initFlashcards();
-                switchTab('listen'); // Auto-flow to listening first
+                switchTab('listen'); 
             }
         } catch (err) {
             alert('Connection failed. Check URL.');
@@ -362,7 +369,6 @@
         }
     }
 
-    // Central TTS Engine
     function speakText(text, rate = 1.0) {
         return new Promise(resolve => {
             if (!('speechSynthesis' in window)) return resolve();
@@ -384,41 +390,92 @@
 
     function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-    // 1. Listening Mode Logic
+    // --- LISTENING ENGINE ---
     let isListening = false;
-    async function startListeningCycle() {
-        if (masterBatch.length === 0) return;
-        isListening = true;
-        document.getElementById('listen-play-btn').classList.add('hidden');
-        document.getElementById('listen-stop-btn').classList.remove('hidden');
-        
+    let listenIndex = 0;
+    
+    function renderListenList() {
+        const container = document.getElementById('listen-list-container');
+        container.innerHTML = '';
+        masterBatch.forEach((item, index) => {
+            let div = document.createElement('div');
+            div.className = `listen-list-item ${index === listenIndex ? 'active-word' : ''}`;
+            div.innerText = `${index + 1}. ${item.front}`;
+            div.onclick = () => jumpToListenWord(index);
+            container.appendChild(div);
+        });
+        updateListenUI();
+    }
+
+    function updateListenUI() {
+        if(masterBatch.length === 0) return;
+        document.getElementById('listen-counter').innerText = `Word ${listenIndex + 1} of ${masterBatch.length}`;
+        document.getElementById('listen-word').innerText = masterBatch[listenIndex].front;
+        renderListenList(); // refresh active highlight
+    }
+
+    async function toggleListening() {
+        if(isListening) {
+            stopListeningCycle();
+        } else {
+            isListening = true;
+            document.getElementById('listen-play-btn').innerText = '⏸️ Stop Cycle';
+            runListenCycle();
+        }
+    }
+
+    async function runListenCycle() {
         let reps = parseInt(document.getElementById('audio-reps').value);
         let speed = parseFloat(document.getElementById('audio-speed').value);
         
-        for (let i = 0; i < masterBatch.length; i++) {
-            if (!isListening) break;
-            
-            document.getElementById('listen-counter').innerText = `Word ${i+1} of ${masterBatch.length}`;
-            document.getElementById('listen-word').innerText = masterBatch[i].front;
+        while (isListening && listenIndex < masterBatch.length) {
+            updateListenUI();
             
             for (let r = 0; r < reps; r++) {
                 if (!isListening) break;
-                await speakText(masterBatch[i].front, speed);
+                await speakText(masterBatch[listenIndex].front, speed);
                 await sleep(1000); 
             }
-            if(isListening) await sleep(1500); // Pause before next word
+            if(isListening) {
+                await sleep(1500); 
+                listenIndex++;
+            }
         }
-        stopListeningCycle();
+        if(listenIndex >= masterBatch.length) {
+            listenIndex = 0; // reset to beginning when done
+            stopListeningCycle();
+        }
     }
     
     function stopListeningCycle() {
         isListening = false;
         window.speechSynthesis.cancel();
-        document.getElementById('listen-play-btn').classList.remove('hidden');
-        document.getElementById('listen-stop-btn').classList.add('hidden');
+        document.getElementById('listen-play-btn').innerText = '▶️ Play Cycle';
     }
 
-    // 2. Writing Mode Logic
+    function nextListenWord() {
+        if(listenIndex < masterBatch.length - 1) {
+            listenIndex++;
+            window.speechSynthesis.cancel();
+            updateListenUI();
+        }
+    }
+
+    function prevListenWord() {
+        if(listenIndex > 0) {
+            listenIndex--;
+            window.speechSynthesis.cancel();
+            updateListenUI();
+        }
+    }
+    
+    function jumpToListenWord(index) {
+        listenIndex = index;
+        window.speechSynthesis.cancel();
+        updateListenUI();
+    }
+
+    // --- WRITING ENGINE ---
     let writeIndex = 0;
     let currentWriteReps = 0;
     
@@ -429,39 +486,59 @@
     }
     
     function updateWriteUI() {
+        let targetReps = parseInt(document.getElementById('write-reps-needed').value);
         document.getElementById('write-counter').innerText = `Word ${writeIndex + 1} of ${masterBatch.length}`;
-        document.getElementById('write-word').innerText = masterBatch[writeIndex].back; // Show English
-        document.getElementById('write-reps-text').innerText = `${currentWriteReps} / 3 Correct`;
+        document.getElementById('write-word').innerText = masterBatch[writeIndex].back; 
+        document.getElementById('write-reps-text').innerText = `${currentWriteReps} / ${targetReps} Correct`;
         document.getElementById('write-input').value = '';
         document.getElementById('write-input').focus();
     }
     
     function checkWritingInput() {
         let inputField = document.getElementById('write-input');
+        let targetReps = parseInt(document.getElementById('write-reps-needed').value);
         let target = masterBatch[writeIndex].front.toLowerCase().trim();
         let current = inputField.value.toLowerCase().trim();
         
         if (current === target) {
             currentWriteReps++;
-            document.getElementById('write-reps-text').innerText = `${currentWriteReps} / 3 Correct`;
+            document.getElementById('write-reps-text').innerText = `${currentWriteReps} / ${targetReps} Correct`;
             inputField.value = '';
             
-            if (currentWriteReps >= 3) {
+            if (currentWriteReps >= targetReps) {
                 writeIndex++;
+                currentWriteReps = 0; // BUG FIXED: Reset counter for the next word
+                
                 if (writeIndex < masterBatch.length) {
                     updateWriteUI();
                 } else {
                     document.getElementById('write-word').innerText = "Writing Complete!";
                     inputField.classList.add('hidden');
+                    document.getElementById('hint-btn').classList.add('hidden');
                 }
             }
         }
     }
+    
     function speakCurrentWriteWord() {
         speakText(masterBatch[writeIndex].front, parseFloat(document.getElementById('audio-speed').value));
     }
 
-    // 3. Vocab/Flashcard Logic (Preserved Sequential Engine)
+    let originalWriteWord = '';
+    function showHint() {
+        if(writeIndex >= masterBatch.length) return;
+        originalWriteWord = document.getElementById('write-word').innerText;
+        document.getElementById('write-word').innerText = masterBatch[writeIndex].front;
+        document.getElementById('write-word').style.color = 'var(--accent)';
+    }
+    function hideHint() {
+        if(writeIndex >= masterBatch.length) return;
+        document.getElementById('write-word').innerText = originalWriteWord;
+        document.getElementById('write-word').style.color = 'var(--text-main)';
+        document.getElementById('write-input').focus();
+    }
+
+    // --- VOCAB ENGINE ---
     let activePool = [];
     let waitingRoom = [];
     let masteredInBatch = 0;
@@ -518,7 +595,6 @@
         }
 
         while (activePool.length < 10 && waitingRoom.length > 0) activePool.push(waitingRoom.shift());
-        
         checkVocabQueue();
     }
 
@@ -540,7 +616,7 @@
         }
     }
 
-    // 4. Grammar Logic
+    // --- GRAMMAR ENGINE ---
     function loadGrammarPlaylist() {
         let playlistId = document.getElementById('grammar-select').value;
         document.getElementById('grammar-frame').src = `https://www.youtube.com/embed/videoseries?list=${playlistId}`;
