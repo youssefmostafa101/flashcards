@@ -55,11 +55,11 @@
             color: var(--accent);
             border: 1px solid var(--accent);
         }
-        .nav-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
         .container { 
             width: 100%; 
-            max-width: 500px; 
+            max-width: 550px; 
             display: flex; 
             flex-direction: column; 
             padding: 20px;
@@ -95,6 +95,23 @@
         .panel { background: #111524; border: 1px solid #2e344e; border-radius: 12px; padding: 20px; margin-bottom: 20px; text-align: center; }
         .large-text { font-size: 32px; font-weight: 700; margin: 20px 0; }
         
+        /* Reading List */
+        .read-list { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+        .read-item {
+            background: #111524; border: 1px solid #2e344e; border-radius: 10px;
+            padding: 14px 16px; display: flex; align-items: center; justify-content: space-between;
+        }
+        .read-words { text-align: left; }
+        .read-target { font-size: 18px; font-weight: 700; color: var(--text-main); margin-bottom: 2px; }
+        .read-meaning { font-size: 14px; color: var(--text-muted); }
+        .icon-audio-btn {
+            background: rgba(255, 255, 255, 0.08); border: none; width: 38px; height: 38px;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: background 0.2s; flex-shrink: 0;
+        }
+        .icon-audio-btn:active { background: var(--accent); }
+        .icon-audio-btn svg { width: 18px; height: 18px; fill: var(--text-main); }
+
         /* Flashcards */
         .card-container { perspective: 1000px; width: 100%; height: 340px; margin-top: 10px; }
         .card { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 0.5s; cursor: pointer; }
@@ -129,13 +146,13 @@
         /* Writing */
         .write-input { font-size: 24px; text-align: center; padding: 16px; margin: 20px 0; width: 100%; box-sizing: border-box; }
         .write-progress { color: var(--easy-btn); font-weight: 700; margin-top: 10px;}
-        .hint-btn { background: #2a3047; color: var(--text-muted); border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; margin-top: 12px; user-select: none; }
+        .hint-btn { background: #2a3047; color: var(--text-muted); border: none; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-size: 14px; margin-top: 12px; user-select: none; }
         .hint-btn:active { color: var(--text-main); background: #3b4261; }
 
         /* Listening Controls */
         .listen-controls { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-top: 20px; }
         .listen-nav-btn { background: #2a3047; border: none; color: white; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; }
-        .listen-list { max-height: 150px; overflow-y: auto; background: #0b0f19; border: 1px solid #2e344e; border-radius: 8px; margin-top: 20px; text-align: left; padding: 8px; }
+        .listen-list { max-height: 180px; overflow-y: auto; background: #0b0f19; border: 1px solid #2e344e; border-radius: 8px; margin-top: 20px; text-align: left; padding: 8px; }
         .listen-list-item { padding: 8px 12px; border-bottom: 1px solid #1e2235; cursor: pointer; font-size: 14px; }
         .listen-list-item:hover { background: #1e2235; }
         .listen-list-item.active-word { color: var(--accent); font-weight: 700; }
@@ -150,6 +167,7 @@
 
 <nav>
     <button class="nav-btn active" id="nav-setup" onclick="switchTab('setup')">⚙️ Setup</button>
+    <button class="nav-btn" id="nav-read" onclick="switchTab('read')" disabled>📖 Read</button>
     <button class="nav-btn" id="nav-listen" onclick="switchTab('listen')" disabled>🎧 Listen</button>
     <button class="nav-btn" id="nav-write" onclick="switchTab('write')" disabled>✍️ Write</button>
     <button class="nav-btn" id="nav-vocab" onclick="switchTab('vocab')" disabled>🃏 Vocab</button>
@@ -205,6 +223,16 @@
     
     <button class="primary-btn" id="load-btn" onclick="fetchFromSheet()">Load Today's 35 Words</button>
     <div id="loading-spinner" class="panel hidden" style="color: var(--accent); margin-top: 10px;">Syncing with Google Sheets...</div>
+</div>
+
+<!-- READING TAB -->
+<div class="container hidden" id="tab-read">
+    <h2>Reading Mode</h2>
+    <p class="subtitle">Review today's 35 words and meanings</p>
+    
+    <div class="read-list" id="read-list-container">
+        <!-- JS populates word cards here -->
+    </div>
 </div>
 
 <!-- LISTENING TAB -->
@@ -283,18 +311,19 @@
 
 <!-- GRAMMAR TAB -->
 <div class="container hidden" id="tab-grammar">
-    <h2>Grammar Hub</h2>
-    <div class="note">💡 Click the <b>1/X</b> playlist icon in the top right corner of the video to choose your lesson.</div>
+    <h2>Grammar Master Video</h2>
+    <div class="note">💡 Use YouTube's video timeline or description to jump between topic timestamps.</div>
     
     <div class="form-group">
-        <select id="grammar-select" onchange="loadGrammarPlaylist()">
-            <option value="PLVFU_EhK40pOsRfACVqtOMooENGNmF3jB">German Playlist</option>
-            <option value="PLVFU_EhK40pPji3qW1ieT3PoZG-yt20Uz">Russian Playlist</option>
+        <select id="grammar-select" onchange="loadGrammarVideo()">
+            <option value="VG_0NGg-gyE">German Master Guide (5.5 hrs)</option>
+            <option value="nsXTwDr1NtQ">Russian Master Guide (7.5 hrs)</option>
+            <option value="Mjh1IUaHTtM">English Master Guide (4.5 hrs)</option>
         </select>
     </div>
     
     <div class="video-container">
-        <iframe id="grammar-frame" src="https://www.youtube.com/embed/videoseries?list=PLVFU_EhK40pOsRfACVqtOMooENGNmF3jB" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+        <iframe id="grammar-frame" src="https://www.youtube.com/embed/VG_0NGg-gyE" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
     </div>
 </div>
 
@@ -322,6 +351,7 @@
         document.getElementById(`nav-${tabId}`).classList.add('active');
         
         if(tabId !== 'listen') stopListeningCycle();
+        if(tabId === 'read' && masterBatch.length > 0) renderReadingList();
         if(tabId === 'write' && masterBatch.length > 0) initWritingMode();
         if(tabId === 'listen' && masterBatch.length > 0) renderListenList();
     }
@@ -354,12 +384,12 @@
             } else {
                 masterBatch = unmastered.slice(0, 35);
                 
-                ['listen', 'write', 'vocab'].forEach(id => {
+                ['read', 'listen', 'write', 'vocab'].forEach(id => {
                     document.getElementById(`nav-${id}`).disabled = false;
                 });
                 
                 initFlashcards();
-                switchTab('listen'); 
+                switchTab('read'); // Auto-land on Reading tab first
             }
         } catch (err) {
             alert('Connection failed. Check URL.');
@@ -390,6 +420,26 @@
 
     function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
+    // --- READING ENGINE ---
+    function renderReadingList() {
+        const container = document.getElementById('read-list-container');
+        container.innerHTML = '';
+        masterBatch.forEach((item, index) => {
+            let div = document.createElement('div');
+            div.className = 'read-item';
+            div.innerHTML = `
+                <div class="read-words">
+                    <div class="read-target">${index + 1}. ${item.front}</div>
+                    <div class="read-meaning">${item.back}</div>
+                </div>
+                <button class="icon-audio-btn" onclick="speakText('${item.front.replace(/'/g, "\\'")}', 0.8)">
+                    <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                </button>
+            `;
+            container.appendChild(div);
+        });
+    }
+
     // --- LISTENING ENGINE ---
     let isListening = false;
     let listenIndex = 0;
@@ -411,7 +461,7 @@
         if(masterBatch.length === 0) return;
         document.getElementById('listen-counter').innerText = `Word ${listenIndex + 1} of ${masterBatch.length}`;
         document.getElementById('listen-word').innerText = masterBatch[listenIndex].front;
-        renderListenList(); // refresh active highlight
+        renderListenList();
     }
 
     async function toggleListening() {
@@ -442,7 +492,7 @@
             }
         }
         if(listenIndex >= masterBatch.length) {
-            listenIndex = 0; // reset to beginning when done
+            listenIndex = 0;
             stopListeningCycle();
         }
     }
@@ -507,7 +557,7 @@
             
             if (currentWriteReps >= targetReps) {
                 writeIndex++;
-                currentWriteReps = 0; // BUG FIXED: Reset counter for the next word
+                currentWriteReps = 0;
                 
                 if (writeIndex < masterBatch.length) {
                     updateWriteUI();
@@ -617,9 +667,9 @@
     }
 
     // --- GRAMMAR ENGINE ---
-    function loadGrammarPlaylist() {
-        let playlistId = document.getElementById('grammar-select').value;
-        document.getElementById('grammar-frame').src = `https://www.youtube.com/embed/videoseries?list=${playlistId}`;
+    function loadGrammarVideo() {
+        let videoId = document.getElementById('grammar-select').value;
+        document.getElementById('grammar-frame').src = `https://www.youtube.com/embed/${videoId}`;
     }
 </script>
 
