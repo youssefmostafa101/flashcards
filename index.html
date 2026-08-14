@@ -78,7 +78,7 @@
         label { font-size: 14px; font-weight: 600; color: var(--text-muted); }
         input, select {
             background: #111524; color: var(--text-main); border: 1px solid #2e344e;
-            padding: 12px; border-radius: 10px; font-size: 15px; outline: none;
+            padding: 12px; border-radius: 10px; font-size: 15px; outline: none; transition: border-color 0.2s;
         }
         input:focus, select:focus { border-color: var(--accent); }
         
@@ -115,11 +115,11 @@
         .icon-audio-btn svg { width: 18px; height: 18px; fill: var(--text-main); }
 
         /* Flashcards */
-        .card-container { perspective: 1000px; width: 100%; height: 340px; margin-top: 10px; }
-        .card { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 0.5s; cursor: pointer; }
+        .card-container { perspective: 1000px; width: 100%; min-height: 340px; margin-top: 10px; }
+        .card { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 0.5s cubic-bezier(0.4, 0.2, 0.2, 1); cursor: pointer; }
         .card.flipped { transform: rotateY(180deg); }
         .front, .back {
-            position: absolute; width: 100%; height: 100%; backface-visibility: hidden;
+            position: absolute; width: 100%; min-height: 340px; backface-visibility: hidden;
             display: flex; flex-direction: column; align-items: center; justify-content: space-between;
             padding: 24px; box-sizing: border-box; border-radius: 20px;
             background: var(--card-bg); border: 1px solid #2d3149; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
@@ -138,7 +138,8 @@
 
         .control-panel { margin-top: 24px; width: 100%; }
         .anki-controls { display: flex; gap: 12px; width: 100%; }
-        .anki-btn { flex: 1; padding: 16px; border: none; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; color: white; }
+        .anki-btn { flex: 1; padding: 16px; border: none; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; color: white; transition: transform 0.1s;}
+        .anki-btn:active { transform: scale(0.97); }
         .anki-btn.hard { background: var(--hard-btn); }
         .anki-btn.easy { background: var(--easy-btn); }
         
@@ -219,7 +220,7 @@
         </select>
     </div>
     
-    <button class="primary-btn" id="load-btn" onclick="fetchFromSheet()">Load Today's Words</button>
+    <button class="primary-btn" id="load-btn" onclick="fetchFromSheet()">Load Today's Words (Max 30)</button>
     <div id="loading-spinner" class="panel hidden" style="color: var(--accent); margin-top: 10px;">Syncing with Database...</div>
 </div>
 
@@ -273,7 +274,7 @@
 <div class="container hidden" id="tab-vocab">
     <h2>Vocab Mastery</h2>
     <div class="progress-box">
-        <div style="font-weight: 700;" id="progress-text">Phase 1: Forward</div>
+        <div style="font-weight: 700; font-size: 15px;" id="progress-text">Phase 1: Forward</div>
         <div style="font-size: 13px; color: #6366f1; margin-top:4px;" id="pool-text">-</div>
     </div>
     
@@ -330,6 +331,7 @@
     let dataCache = {}; 
     let scriptUrl = '';
     let lang = 'de-DE';
+    const DAILY_LIMIT = 30; // Hardcoded cap to 30
     
     function initTTS() {
         if ('speechSynthesis' in window) {
@@ -392,7 +394,9 @@
         if (unmastered.length === 0) {
             alert("All words in this sheet are mastered!");
         } else {
-            masterBatch = unmastered.slice(0, 35);
+            // Apply strict 30 word cap here
+            masterBatch = unmastered.slice(0, DAILY_LIMIT);
+            
             ['read', 'listen', 'write', 'vocab'].forEach(id => {
                 document.getElementById(`nav-${id}`).disabled = false;
             });
@@ -574,7 +578,6 @@
     function initFlashcards() {
         phase1Waiting = masterBatch.filter(c => !c.status || !c.status.startsWith('REV'));
         phase2Waiting = masterBatch.filter(c => c.status && c.status.startsWith('REV'));
-        
         loadNextVocabPhase();
     }
 
@@ -605,7 +608,19 @@
         }
     }
 
+    function updateVocabProgress() {
+        let p1Done = masterBatch.filter(c => c.status && (c.status.startsWith('REV') || c.status === 'MASTERED')).length;
+        let p2Done = masterBatch.filter(c => c.status === 'MASTERED').length;
+        
+        if (currentPhase === 'FORWARD') {
+            document.getElementById('progress-text').innerText = `Phase 1 Progress: ${p1Done} / ${masterBatch.length} to Phase 2`;
+        } else if (currentPhase === 'REVERSE') {
+            document.getElementById('progress-text').innerText = `Phase 2 Progress: ${p2Done} / ${masterBatch.length} Mastered`;
+        }
+    }
+
     function renderCard() {
+        if(activePool.length === 0) return;
         const current = activePool[0];
         const isRev = currentPhase === 'REVERSE';
         
@@ -613,19 +628,28 @@
         const dBack = isRev ? current.front : current.back;
         const safeTargetWord = current.front.replace(/'/g, "\\'");
         
-        // Front Content (Target audio only shows on front in Forward Phase)
+        // Front Content
         let frontHtml = `
             <span class="status-badge" id="card-status">Status: ${current.status || 'New'}</span>
             <div id="card-front">${dFront}</div>
         `;
+        
         if (!isRev) {
             frontHtml += `<button class="audio-btn" onclick="speakVocab(event, '${safeTargetWord}')">
                 <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
             </button>`;
+        } else {
+            // DUOLINGO TYPING INPUT (Reverse Phase Only)
+            frontHtml += `
+            <div id="reverse-typing-area" style="width: 100%; margin-top: 15px;" onclick="event.stopPropagation()">
+                <input type="text" id="reverse-input" class="write-input" style="font-size: 18px; padding: 12px; margin-bottom: 8px; background: #111524;" placeholder="Type target language..." onkeypress="handleReverseKey(event)" autocomplete="off">
+                <button class="secondary-btn" style="margin-top: 0; padding: 10px;" onclick="checkReverseTyping(event)">Check Answer</button>
+            </div>
+            `;
         }
         document.querySelector('.front').innerHTML = frontHtml;
         
-        // Back Content (Target audio shows on back in Reverse Phase)
+        // Back Content
         let backHtml = `<div class="back-content" id="card-back">${dBack}</div>`;
         if (isRev) {
             backHtml += `<button class="audio-btn" style="margin-top: 15px;" onclick="speakVocab(event, '${safeTargetWord}')">
@@ -634,11 +658,11 @@
         }
         document.querySelector('.back').innerHTML = backHtml;
         
-        // UI Text
-        let phaseText = isRev ? "Phase 2: Reverse (English → Target)" : "Phase 1: Forward (Target → English)";
-        document.getElementById('progress-text').innerText = phaseText;
+        // Update UI Tracking
+        updateVocabProgress();
         document.getElementById('pool-text').innerText = `🔥 Active Focus Arena: ${activePool.length} words`;
         
+        // Reset card state
         document.getElementById('flashcard').classList.remove('flipped');
         document.getElementById('reveal-btn').classList.remove('hidden');
         document.getElementById('anki-controls').classList.add('hidden');
@@ -667,39 +691,79 @@
         speakText(targetText, 1.0);
     }
 
-    async function handleCorrect(e) {
-        e.stopPropagation();
-        let currentCard = activePool.shift(); 
-        
-        let newStatus = '✓';
-        if (currentCard.status === '✓') newStatus = '✓✓';
-        else if (currentCard.status === '✓✓') newStatus = 'REV';
-        else if (currentCard.status === 'REV') newStatus = 'REV✓';
-        else if (currentCard.status === 'REV✓') newStatus = 'REV✓✓';
-        else if (currentCard.status === 'REV✓✓') newStatus = 'MASTERED';
+    // Duolingo Reverse Typing Logic
+    function checkReverseTyping(e) {
+        if(e) e.stopPropagation();
+        let inputField = document.getElementById('reverse-input');
+        let userInput = inputField.value.trim().toLowerCase();
+        let targetWord = activePool[0].front.toLowerCase().trim(); 
 
-        fetch(`${scriptUrl}?action=update&row=${currentCard.rowIndex}&status=${encodeURIComponent(newStatus)}`, { mode: 'no-cors' });
-        currentCard.status = newStatus;
-
-        if (newStatus === 'REV') {
-            phase2Waiting.push(currentCard); // Moves to Phase 2 waiting area
-        } else if (newStatus !== 'MASTERED') {
-            waitingRoom.push(currentCard); // Cycles back into current phase
+        if (userInput === targetWord) {
+            inputField.style.borderColor = 'var(--easy-btn)';
+            // Give user a split second to see the green border before auto-marking correct
+            setTimeout(() => {
+                handleCorrect({ stopPropagation: () => {} });
+            }, 250);
+        } else {
+            inputField.style.borderColor = 'var(--hard-btn)';
+            setTimeout(() => inputField.style.borderColor = '#2e344e', 800);
         }
-
-        checkVocabQueue();
     }
 
-    async function handleMiss(e) {
-        e.stopPropagation();
-        let currentCard = activePool.shift();
+    function handleReverseKey(e) {
+        if(e.key === 'Enter') checkReverseTyping(e);
+    }
+
+    // Invisible Swap Logic: Flips the card to the front and waits 300ms before changing text
+    function transitionToNextCard(callback) {
+        document.getElementById('anki-controls').classList.add('hidden');
+        document.getElementById('reveal-btn').classList.remove('hidden');
+        document.getElementById('flashcard').classList.remove('flipped');
         
-        let newStatus = currentPhase === 'REVERSE' ? 'REV' : '';
-        fetch(`${scriptUrl}?action=update&row=${currentCard.rowIndex}&status=${newStatus}`, { mode: 'no-cors' });
-        currentCard.status = newStatus;
+        setTimeout(() => {
+            callback();
+        }, 300); // 300ms matches the flip animation to hide the swap
+    }
+
+    function handleCorrect(e) {
+        if(e && e.stopPropagation) e.stopPropagation();
         
-        waitingRoom.push(currentCard);
-        checkVocabQueue();
+        transitionToNextCard(() => {
+            let currentCard = activePool.shift(); 
+            
+            let newStatus = '✓';
+            if (currentCard.status === '✓') newStatus = '✓✓';
+            else if (currentCard.status === '✓✓') newStatus = 'REV';
+            else if (currentCard.status === 'REV') newStatus = 'REV✓';
+            else if (currentCard.status === 'REV✓') newStatus = 'REV✓✓';
+            else if (currentCard.status === 'REV✓✓') newStatus = 'MASTERED';
+
+            fetch(`${scriptUrl}?action=update&row=${currentCard.rowIndex}&status=${encodeURIComponent(newStatus)}`, { mode: 'no-cors' });
+            currentCard.status = newStatus;
+
+            if (newStatus === 'REV') {
+                phase2Waiting.push(currentCard); 
+            } else if (newStatus !== 'MASTERED') {
+                waitingRoom.push(currentCard); 
+            }
+
+            checkVocabQueue();
+        });
+    }
+
+    function handleMiss(e) {
+        if(e && e.stopPropagation) e.stopPropagation();
+        
+        transitionToNextCard(() => {
+            let currentCard = activePool.shift();
+            
+            let newStatus = currentPhase === 'REVERSE' ? 'REV' : '';
+            fetch(`${scriptUrl}?action=update&row=${currentCard.rowIndex}&status=${newStatus}`, { mode: 'no-cors' });
+            currentCard.status = newStatus;
+            
+            waitingRoom.push(currentCard);
+            checkVocabQueue();
+        });
     }
 
     function checkVocabQueue() {
@@ -720,3 +784,4 @@
 
 </body>
 </html>
+
