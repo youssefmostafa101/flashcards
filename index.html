@@ -228,15 +228,12 @@
     <h2>Reading Mode</h2>
     <p class="subtitle">Review today's word batch and meanings</p>
     
-    <div class="read-list" id="read-list-container">
-        <!-- JS populates word cards here -->
-    </div>
+    <div class="read-list" id="read-list-container"></div>
 </div>
 
 <!-- LISTENING TAB -->
 <div class="container hidden" id="tab-listen">
     <h2>Listening Mode</h2>
-    
     <div class="panel" style="padding-bottom: 10px;">
         <div id="listen-counter" style="color: var(--text-muted); font-size: 14px;">-</div>
         <div class="large-text" id="listen-word">-</div>
@@ -250,16 +247,12 @@
             <button class="listen-nav-btn" onclick="nextListenWord()">Next →</button>
         </div>
     </div>
-    
-    <div class="listen-list" id="listen-list-container">
-        <!-- JS populates list here -->
-    </div>
+    <div class="listen-list" id="listen-list-container"></div>
 </div>
 
 <!-- WRITING TAB -->
 <div class="container hidden" id="tab-write">
     <h2>Writing Mode</h2>
-    
     <div class="panel">
         <div id="write-counter" style="color: var(--text-muted); font-size: 14px;">Word 1</div>
         <button class="audio-btn" style="margin: 10px auto;" onclick="speakCurrentWriteWord()">
@@ -272,7 +265,6 @@
                placeholder="Type here..." oninput="checkWritingInput()">
                
         <div class="write-progress" id="write-reps-text">0 / 3 Correct</div>
-        
         <button class="hint-btn" id="hint-btn" onmousedown="showHint()" onmouseup="hideHint()" ontouchstart="showHint()" ontouchend="hideHint()">Press & Hold for Hint</button>
     </div>
 </div>
@@ -281,22 +273,14 @@
 <div class="container hidden" id="tab-vocab">
     <h2>Vocab Mastery</h2>
     <div class="progress-box">
-        <div style="font-weight: 700;" id="progress-text">Batch Progress: 0 Mastered</div>
-        <div style="font-size: 13px; color: #6366f1; margin-top:4px;" id="pool-text">🔥 Active Focus Arena: 10 words</div>
+        <div style="font-weight: 700;" id="progress-text">Phase 1: Forward</div>
+        <div style="font-size: 13px; color: #6366f1; margin-top:4px;" id="pool-text">-</div>
     </div>
     
     <div class="card-container" onclick="flipCard()">
         <div class="card" id="flashcard">
-            <div class="front">
-                <span class="status-badge" id="card-status">Status: New</span>
-                <div id="card-front">Front</div>
-                <button class="audio-btn" onclick="speakVocab(event)">
-                    <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
-                </button>
-            </div>
-            <div class="back">
-                <div class="back-content" id="card-back">Back</div>
-            </div>
+            <div class="front"></div> <!-- JS injects content here -->
+            <div class="back"></div>  <!-- JS injects content here -->
         </div>
     </div>
     
@@ -313,7 +297,6 @@
 <div class="container hidden" id="tab-grammar">
     <h2>Grammar Master Video</h2>
     <div class="note">💡 Use YouTube's video timeline or description to jump between topic timestamps.</div>
-    
     <div class="form-group">
         <select id="grammar-select" onchange="loadGrammarVideo()">
             <option value="VG_0NGg-gyE">German Master Guide (5.5 hrs)</option>
@@ -321,7 +304,6 @@
             <option value="Mjh1IUaHTtM">English Master Guide (4.5 hrs)</option>
         </select>
     </div>
-    
     <div class="video-container">
         <iframe id="grammar-frame" src="https://www.youtube.com/embed/VG_0NGg-gyE" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
     </div>
@@ -339,7 +321,6 @@
 </div>
 
 <script>
-    // Hardcoded Sheet Web App URLs
     const PRESETS = {
         'de-DE': 'https://script.google.com/macros/s/AKfycbweLvepwJR9gtIM9ytJZUx8XiTowsMtc2PrnkGakNEse1baaCJcUTU38rU_Mebr3TmBEw/exec',
         'ru-RU': 'https://script.google.com/macros/s/AKfycbxPJTwe9HDw9MGPQ9YOUkLCQEAKTDewAJiEG-DV7vXaF_rWcKVojshgsVmqazbDedxt_w/exec'
@@ -364,7 +345,7 @@
         document.getElementById(`tab-${tabId}`).classList.remove('hidden');
         document.getElementById(`nav-${tabId}`).classList.add('active');
         
-        window.speechSynthesis.cancel(); // Stop audio immediately on tab switch
+        window.speechSynthesis.cancel(); 
         
         if(tabId === 'read' && masterBatch.length > 0) renderReadingList();
         if(tabId === 'write' && masterBatch.length > 0) initWritingMode();
@@ -379,7 +360,7 @@
 
     async function fetchFromSheet(forceRefresh = false) {
         lang = document.getElementById('voice-lang').value;
-        scriptUrl = PRESETS[lang]; // Pull URL directly from presets
+        scriptUrl = PRESETS[lang]; 
         
         localStorage.setItem('hub_lang', lang);
 
@@ -406,18 +387,15 @@
     }
 
     function processLoadedData(data) {
-        // Mastered words are explicitly ignored and filtered out entirely
         let unmastered = data.filter(item => item.status !== 'MASTERED');
         
         if (unmastered.length === 0) {
             alert("All words in this sheet are mastered!");
         } else {
             masterBatch = unmastered.slice(0, 35);
-            
             ['read', 'listen', 'write', 'vocab'].forEach(id => {
                 document.getElementById(`nav-${id}`).disabled = false;
             });
-            
             initFlashcards();
             switchTab('read'); 
         }
@@ -485,19 +463,19 @@
         document.getElementById('listen-counter').innerText = `Word ${listenIndex + 1} of ${masterBatch.length}`;
         document.getElementById('listen-word').innerText = masterBatch[listenIndex].front;
         renderListenList();
-        playCurrentListenWord(); // Auto-play when manually switching
+        playCurrentListenWord(); 
     }
 
     async function playCurrentListenWord() {
         currentListenSession++;
-        let thisSession = currentListenSession; // Tracks rapid clicking
+        let thisSession = currentListenSession; 
         let speed = parseFloat(document.getElementById('audio-speed').value);
         let reps = parseInt(document.getElementById('audio-reps').value);
         
         window.speechSynthesis.cancel();
         
         for(let i = 0; i < reps; i++) {
-            if (thisSession !== currentListenSession) break; // Break if user clicked next
+            if (thisSession !== currentListenSession) break; 
             await speakText(masterBatch[listenIndex].front, speed);
             if (thisSession !== currentListenSession) break;
             if (i < reps - 1) await sleep(600); 
@@ -586,26 +564,79 @@
         document.getElementById('write-input').focus();
     }
 
-    // --- VOCAB ENGINE ---
+    // --- TWO-PHASE VOCAB ENGINE ---
     let activePool = [];
     let waitingRoom = [];
-    let masteredInBatch = 0;
+    let phase1Waiting = [];
+    let phase2Waiting = [];
+    let currentPhase = 'FORWARD'; 
     
     function initFlashcards() {
-        let poolSize = Math.min(10, masterBatch.length);
-        activePool = masterBatch.slice(0, poolSize);
-        waitingRoom = masterBatch.slice(poolSize);
-        masteredInBatch = 0;
-        renderCard();
+        phase1Waiting = masterBatch.filter(c => !c.status || !c.status.startsWith('REV'));
+        phase2Waiting = masterBatch.filter(c => c.status && c.status.startsWith('REV'));
+        
+        loadNextVocabPhase();
+    }
+
+    function loadNextVocabPhase() {
+        if (phase1Waiting.length > 0) {
+            currentPhase = 'FORWARD';
+            waitingRoom = phase1Waiting;
+            phase1Waiting = []; 
+        } else if (phase2Waiting.length > 0) {
+            currentPhase = 'REVERSE';
+            waitingRoom = phase2Waiting;
+            phase2Waiting = [];
+        } else {
+            currentPhase = 'DONE';
+        }
+        
+        if (currentPhase !== 'DONE') {
+            fillActivePool();
+            renderCard();
+        } else {
+            renderDoneScreen();
+        }
+    }
+
+    function fillActivePool() {
+        while (activePool.length < 10 && waitingRoom.length > 0) {
+            activePool.push(waitingRoom.shift());
+        }
     }
 
     function renderCard() {
-        if(activePool.length === 0) return;
         const current = activePool[0];
-        document.getElementById('card-front').innerText = current.front;
-        document.getElementById('card-back').innerText = current.back;
-        document.getElementById('card-status').innerText = current.status ? `Status: ${current.status}` : 'Status: New';
-        document.getElementById('progress-text').innerText = `Batch Progress: ${masteredInBatch} / ${masterBatch.length} Mastered`;
+        const isRev = currentPhase === 'REVERSE';
+        
+        const dFront = isRev ? current.back : current.front;
+        const dBack = isRev ? current.front : current.back;
+        const safeTargetWord = current.front.replace(/'/g, "\\'");
+        
+        // Front Content (Target audio only shows on front in Forward Phase)
+        let frontHtml = `
+            <span class="status-badge" id="card-status">Status: ${current.status || 'New'}</span>
+            <div id="card-front">${dFront}</div>
+        `;
+        if (!isRev) {
+            frontHtml += `<button class="audio-btn" onclick="speakVocab(event, '${safeTargetWord}')">
+                <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+            </button>`;
+        }
+        document.querySelector('.front').innerHTML = frontHtml;
+        
+        // Back Content (Target audio shows on back in Reverse Phase)
+        let backHtml = `<div class="back-content" id="card-back">${dBack}</div>`;
+        if (isRev) {
+            backHtml += `<button class="audio-btn" style="margin-top: 15px;" onclick="speakVocab(event, '${safeTargetWord}')">
+                <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+            </button>`;
+        }
+        document.querySelector('.back').innerHTML = backHtml;
+        
+        // UI Text
+        let phaseText = isRev ? "Phase 2: Reverse (English → Target)" : "Phase 1: Forward (Target → English)";
+        document.getElementById('progress-text').innerText = phaseText;
         document.getElementById('pool-text').innerText = `🔥 Active Focus Arena: ${activePool.length} words`;
         
         document.getElementById('flashcard').classList.remove('flipped');
@@ -613,16 +644,27 @@
         document.getElementById('anki-controls').classList.add('hidden');
     }
 
+    function renderDoneScreen() {
+        document.querySelector('.front').innerHTML = `<div id="card-front" style="font-size:32px; text-align:center;">Today is Done! 🎉</div>`;
+        document.querySelector('.back').innerHTML = `<div class="back-content">Awesome job.</div>`;
+        document.getElementById('flashcard').classList.remove('flipped');
+        document.getElementById('reveal-btn').classList.add('hidden');
+        document.getElementById('anki-controls').classList.add('hidden');
+        document.getElementById('progress-text').innerText = "All Phases Complete!";
+        document.getElementById('pool-text').innerText = "Batch fully mastered in both directions.";
+    }
+
     function flipCard(e) {
         if(e) e.stopPropagation();
+        if(currentPhase === 'DONE') return;
         document.getElementById('flashcard').classList.toggle('flipped');
         document.getElementById('reveal-btn').classList.add('hidden');
         document.getElementById('anki-controls').classList.remove('hidden');
     }
 
-    function speakVocab(e) {
+    function speakVocab(e, targetText) {
         if(e) e.stopPropagation();
-        speakText(activePool[0].front, 1.0);
+        speakText(targetText, 1.0);
     }
 
     async function handleCorrect(e) {
@@ -631,34 +673,39 @@
         
         let newStatus = '✓';
         if (currentCard.status === '✓') newStatus = '✓✓';
-        else if (currentCard.status === '✓✓') newStatus = 'MASTERED';
+        else if (currentCard.status === '✓✓') newStatus = 'REV';
+        else if (currentCard.status === 'REV') newStatus = 'REV✓';
+        else if (currentCard.status === 'REV✓') newStatus = 'REV✓✓';
+        else if (currentCard.status === 'REV✓✓') newStatus = 'MASTERED';
 
         fetch(`${scriptUrl}?action=update&row=${currentCard.rowIndex}&status=${encodeURIComponent(newStatus)}`, { mode: 'no-cors' });
+        currentCard.status = newStatus;
 
-        if (newStatus !== 'MASTERED') {
-            currentCard.status = newStatus;
-            waitingRoom.push(currentCard); 
-        } else {
-            masteredInBatch++;
+        if (newStatus === 'REV') {
+            phase2Waiting.push(currentCard); // Moves to Phase 2 waiting area
+        } else if (newStatus !== 'MASTERED') {
+            waitingRoom.push(currentCard); // Cycles back into current phase
         }
 
-        while (activePool.length < 10 && waitingRoom.length > 0) activePool.push(waitingRoom.shift());
         checkVocabQueue();
     }
 
     async function handleMiss(e) {
         e.stopPropagation();
         let currentCard = activePool.shift();
-        fetch(`${scriptUrl}?action=update&row=${currentCard.rowIndex}&status=`, { mode: 'no-cors' });
-        currentCard.status = '';
-        activePool.push(currentCard);
+        
+        let newStatus = currentPhase === 'REVERSE' ? 'REV' : '';
+        fetch(`${scriptUrl}?action=update&row=${currentCard.rowIndex}&status=${newStatus}`, { mode: 'no-cors' });
+        currentCard.status = newStatus;
+        
+        waitingRoom.push(currentCard);
         checkVocabQueue();
     }
 
     function checkVocabQueue() {
-        if (masteredInBatch >= masterBatch.length) {
-            document.getElementById('card-front').innerText = "Batch Complete!";
-            document.getElementById('card-back').innerText = "Great Job.";
+        fillActivePool();
+        if (activePool.length === 0) {
+            loadNextVocabPhase();
         } else {
             renderCard();
         }
